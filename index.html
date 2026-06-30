@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLA Task Tracker v37.0 - Operations Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cobalt: #00F0FF; 
+  --cobalt-glow: rgba(0, 240, 255, 0.25);
+  --sky: #3B82F6;
+  --mint: #00FFD2;
+  --lime: #05FF62;
+
+  --bg: #070A13; 
+  --white: #FFFFFF;
+  --surface: #0F1524; 
+  --surface2: #1E293B; 
+  --surface-modal: #151D30;
+  --border: rgba(0, 240, 255, 0.15);
+  --border2: rgba(255, 255, 255, 0.2);
+  --text: #F3F4F6; 
+  --text2: #E2E8F0; 
+  --text3: #94A3B8; 
+
+  --red: #FF3B30; 
+  --yellow: #FFCC00; 
+  --green: #34C759; 
+  --neon-magenta: #FF00FF;
+
+  --font: 'Plus Jakarta Sans', sans-serif;
+  --radius: 16px;
+  --radius-sm: 8px;
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+#loading-overlay { display: none; position: fixed; inset: 0; background: rgba(7, 10, 19, 0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+.loader-spinner { width: 48px; height: 48px; border: 4px solid rgba(0, 240, 255, 0.15); border-top-color: var(--cobalt); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 24px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { color: var(--white); font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.loader-sub { color: var(--text3); font-size: 13px; margin-top: 8px; font-weight: 500; }
+
+#upload-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; background: radial-gradient(circle at top right, #0F172A, #070A13); }
+.logo-container { display: flex; justify-content: center; align-items: center; margin-bottom: 25px; }
+.logo-img { height: 220px; width: auto; object-fit: contain; filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.15)); }
+
+.brand-sub { font-size: 12px; color: var(--cobalt); letter-spacing: 6px; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; text-shadow: 0 0 8px var(--cobalt-glow); }
+.brand-title { font-size: 32px; font-weight: 800; color: var(--white); letter-spacing: -1px; margin-bottom: 40px; display: flex; align-items: center; gap: 12px; }
+.version-tag { font-size: 14px; background: rgba(0, 240, 255, 0.1); color: var(--cobalt); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); letter-spacing: 0; }
+
+.upload-zone { width: 580px; max-width: 92vw; border: 2px dashed rgba(0, 240, 255, 0.4); border-radius: 24px; padding: 64px 40px; text-align: center; cursor: pointer; transition: all 0.4s ease; background: rgba(15, 21, 36, 0.7); backdrop-filter: blur(20px); box-shadow: var(--shadow); }
+.upload-zone:hover { border-color: var(--cobalt); background: rgba(0, 240, 255, 0.03); transform: translateY(-2px); box-shadow: 0 0 20px var(--cobalt-glow); }
+.upload-icon { width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 50%; background: rgba(0, 240, 255, 0.1); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid rgba(0, 240, 255, 0.2); }
+.upload-title { font-size: 20px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.upload-hint { font-size: 14px; color: var(--text2); line-height: 1.7; }
+#file-input { display: none; }
+
+.instructions-box { margin-top: 32px; width: 580px; max-width: 92vw; background: rgba(30, 41, 59, 0.3); border-radius: var(--radius); padding: 24px 28px; border: 1px solid var(--border); }
+.instructions-box h3 { font-size: 13px; color: var(--cobalt); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.instructions-box ol { font-size: 13px; color: var(--text2); line-height: 2; padding-left: 20px; }
+
+#dashboard { display: none; animation: fadeIn 0.5s ease; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 75px; background: rgba(15, 21, 36, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+
+.top-bar-left { display: flex; align-items: center; gap: 20px; position: relative; padding-left: 240px; height: 100%; }
+.top-bar-left .logo-img { height: 220px; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 200; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
+.top-bar-titles { display: flex; flex-direction: column; justify-content: center; }
+.app-header-title { font-size: 20px; font-weight: 800; color: var(--white); display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+
+.top-bar-meta { font-size: 12px; color: var(--text2); display: flex; gap: 16px; margin-top: 4px; opacity: 0.8; }
+.top-bar-meta strong { color: var(--cobalt); }
+
+.btn-group { display: flex; gap: 10px; align-items: center; }
+
+.btn, .view-tab, .expand-btn, .nm-close { 
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; border-radius: var(--radius-sm); 
+  font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface2); 
+  color: var(--text); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-family: var(--font); white-space: nowrap;
+  border: 1px solid var(--cobalt);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4), inset 0 0 5px rgba(0, 240, 255, 0.2); 
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+}
+.expand-btn { background: transparent; padding: 8px 16px; margin-top: 10px; border-radius: 20px; }
+.nm-close { padding: 6px 14px; float: right; }
+
+.btn:hover, .view-tab:hover, .expand-btn:hover, .nm-close:hover { 
+  border-color: var(--cobalt); color: var(--white); background: rgba(0, 240, 255, 0.1); 
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.8), inset 0 0 10px rgba(0, 240, 255, 0.4); 
+  transform: translateY(-2px); 
+}
+.btn:active, .view-tab:active, .expand-btn:active, .nm-close:active { 
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.9), inset 0 0 15px rgba(255, 0, 255, 0.6) !important; 
+  background-color: rgba(255, 0, 255, 0.2) !important; border-color: var(--neon-magenta) !important; color: #FFF !important; 
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.8) !important; transform: scale(0.95); 
+}
+
+.view-tab { padding: 10px 24px; border-radius: 6px; }
+.view-tab.active { 
+  background: rgba(0, 240, 255, 0.15); border-color: var(--cobalt);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.6), inset 0 0 8px rgba(0, 240, 255, 0.3); 
+  color: var(--white);
+}
+
+.view-tab.compare-tab { color: #C4B5FD; border: 1px solid transparent; }
+.view-tab.compare-tab.active {
+  background: rgba(139, 92, 246, 0.25); border-color: #A78BFA; color: #FFF;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.8), inset 0 0 10px rgba(139, 92, 246, 0.4);
+}
+
+.dashboard-body { padding: 24px 32px; max-width: 1650px; margin: 0 auto; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; box-shadow: var(--shadow); transition: transform 0.3s ease; cursor: pointer; }
+.kpi-card:hover { transform: translateY(-4px); border-color: rgba(0, 240, 255, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,240,255,0.1); }
+.kpi-card.active-kpi { border-color: var(--white); box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(255,255,255,0.4); transform: translateY(-4px); }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+.kpi-card.c-cobalt::before { background: var(--cobalt); box-shadow: 0 0 10px var(--cobalt); }
+.kpi-card.c-green::before { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.kpi-card.c-yellow::before { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+.kpi-card.c-red::before { background: var(--red); box-shadow: 0 0 10px var(--red); }
+.kpi-card.c-sky::before { background: var(--sky); box-shadow: 0 0 10px var(--sky); }
+.kpi-card.c-mint::before { background: linear-gradient(90deg, var(--mint), var(--lime)); }
+.kpi-card.c-purple::before { background: #A78BFA; box-shadow: 0 0 10px #A78BFA; }
+
+.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); margin-bottom: 8px; font-weight: 600; pointer-events:none; }
+.kpi-value { font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; pointer-events:none; }
+.kpi-detail { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.4; pointer-events:none; }
+.kpi-card.c-red .kpi-value { color: var(--red); text-shadow: 0 0 10px rgba(255, 59, 48, 0.5); } 
+
+.filter-bar { display: flex; flex-wrap: nowrap; gap: 10px; margin-bottom: 24px; padding: 16px 20px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); align-items: center; box-shadow: var(--shadow); overflow-x: auto; width: 100%; }
+.filter-label { font-size: 11px; color: var(--cobalt); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; white-space: nowrap; margin-right: 4px;}
+.filter-select { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; font-family: var(--font); cursor: pointer; outline: none; flex: 1; min-width: 0; transition: border-color 0.2s;}
+.filter-select:hover { border-color: var(--cobalt); }
+.search-input { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px 8px 32px; font-size: 12px; font-family: var(--font); outline: none; flex: 2; min-width: 120px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2394A3B8' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 10px center; transition: border-color 0.2s; }
+.search-input:focus { border-color: var(--cobalt); box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
+.btn-clear { background: var(--surface2); border: 1px solid var(--red); color: var(--red); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 12px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: all 0.2s;}
+.btn-clear:hover { background: rgba(255, 59, 48, 0.1); box-shadow: 0 0 10px rgba(255, 59, 48, 0.3); }
+
+.view-tabs { display: flex; gap: 8px; margin-bottom: 24px; background: rgba(15, 21, 36, 0.5); border-radius: var(--radius-sm); padding: 6px; width: fit-content; border: 1px solid var(--border); flex-wrap: wrap; }
+
+.section-title { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+.section-title .count { font-size: 12px; background: rgba(0, 240, 255, 0.08); color: var(--cobalt); padding: 4px 14px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(0, 240, 255, 0.2); }
+
+.help-icon { cursor: help; opacity: 0.6; font-size: 14px; margin-left: 6px; transition: opacity 0.2s; display: inline-block;}
+.help-icon:hover { opacity: 1; transform: scale(1.1); }
+
+/* ESTILOS EXACTOS RESTAURADOS DE LOS GRÁFICOS (v35.0 base) */
+.charts-grid-expanded { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+.chart-card-full { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow); height: 420px; position: relative; }
+.chart-card-full.span-2 { grid-column: span 2; height: 460px; }
+.chart-card-full.span-3 { grid-column: span 3; height: 460px; }
+.chart-card-full.span-1 { grid-column: span 1; height: 460px; }
+.chart-card-full h3 { font-size: 14px; color: var(--white); margin-bottom: 20px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.chart-card-full h3::before { content: ''; width: 4px; height: 16px; background: var(--cobalt); border-radius: 2px; display: inline-block; }
+.chart-wrapper-inside { position: relative; height: calc(100% - 40px); width: 100%; }
+
+.chart-select { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 11px; outline: none; cursor: pointer; margin-left: auto; text-transform:none;}
+.chart-select:hover { border-color: var(--cobalt); }
+
+@media (max-width: 1200px) {
+  .charts-grid-expanded { grid-template-columns: 1fr; }
+  .chart-card-full.span-2, .chart-card-full.span-3, .chart-card-full.span-1 { grid-column: span 1; }
+}
+
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 32px; box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+thead th { background: rgba(30, 41, 59, 0.4); padding: 16px 14px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+thead th:hover { color: var(--cobalt); }
+thead th .sort-arrow { font-size: 10px; margin-left: 6px; opacity: 0.3; }
+thead th.sorted .sort-arrow { opacity: 1; color: var(--cobalt); }
+tbody td { padding: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
+tbody tr:hover { background: rgba(0, 240, 255, 0.03); }
+.task-name { font-weight: 600; max-width: 350px; color: var(--white); }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 5px 12px; border-radius: 20px; font-weight: 600; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-completed { background: rgba(16, 185, 129, 0.08); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.2); }
+.badge-inprogress { background: rgba(251, 191, 36, 0.08); color: #FBBF24; border: 1px solid rgba(251, 191, 36, 0.2); }
+.badge-notstarted { background: rgba(255,255,255,0.03); color: var(--text3); border: 1px solid var(--border); }
+.badge-overdue { background: rgba(255, 59, 48, 0.1); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 0.25); }
+.badge-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.badge-completed .badge-dot { background: var(--green); }
+.badge-inprogress .badge-dot { background: var(--yellow); }
+.badge-notstarted .badge-dot { background: var(--text3); }
+.badge-overdue .badge-dot { background: var(--red); }
+
+/* Diff Matrix Badges */
+.diff-badge-new { background: rgba(52, 199, 89, 0.15); color: #34C759; border: 1px solid rgba(52, 199, 89, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11px;}
+.diff-badge-done { background: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.25); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11px;}
+.diff-badge-pending { background: rgba(251, 191, 36, 0.1); color: #FBBF24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11px;}
+.diff-badge-removed { background: rgba(255, 59, 48, 0.1); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11px;}
+
+.priority-high { color: #FF3B30; font-weight: 700; }
+.case-tag { display: inline-block; font-size: 11px; padding: 4px 10px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+
+.assignee-pill { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: rgba(59, 130, 246, 0.12); color: #60A5FA; font-weight: 600; border: 1px solid rgba(59, 130, 246, 0.15); margin: 2px; display: inline-block; }
+
+.cases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.case-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: all 0.3s ease; box-shadow: var(--shadow); }
+.case-card:hover { border-color: var(--cobalt); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px var(--cobalt-glow); }
+.case-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.case-card-name { font-size: 17px; font-weight: 700; flex: 1; margin-right: 12px; color: var(--white); }
+.case-card-count { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: rgba(59, 130, 246, 0.1); color: #60A5FA; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.2); }
+.case-card-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; font-size: 12px; }
+.case-stat { display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--text3); }
+.case-stat .dot { width: 8px; height: 8px; border-radius: 50%; }
+.case-progress-bar { width: 100%; height: 6px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 18px; }
+.case-progress-bar > div { height: 100%; float: left; }
+.cpb-completed { background: var(--green); }
+.cpb-inprogress { background: var(--yellow); }
+.cpb-notstarted { background: var(--text3); }
+.case-card-tasks { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+.case-card.expanded .case-card-tasks { max-height: 2500px; }
+.case-task-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); font-size: 12px; }
+
+.person-section { margin-bottom: 32px; background: rgba(15, 21, 36, 0.3); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border); }
+.person-header { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.person-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--sky), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3); }
+.person-name { font-weight: 700; font-size: 16px; color: var(--white); }
+.person-count { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+.strategic-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 32px; }
+.strategic-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column;}
+.strategic-card h3 { font-size: 15px; color: var(--cobalt); margin-bottom: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+.strategic-list { display: flex; flex-direction: column; gap: 12px; flex: 1;}
+.strategic-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 14px; border-radius: var(--radius-sm); font-size: 13px; display: flex; justify-content: space-between; align-items: flex-start; }
+.strategic-meta { display: flex; flex-direction: column; gap: 4px; flex: 1; padding-right: 12px;}
+.strategic-title { font-weight: 600; color: var(--white); line-height: 1.4;}
+.strategic-sub { font-size: 11px; color: var(--text3); }
+
+.delta-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-weight: 700; border-radius: 20px; white-space: nowrap; }
+.delta-pos { background: rgba(52, 199, 89, 0.15); color: #34C759; border: 1px solid rgba(52, 199, 89, 0.3); box-shadow: 0 0 10px rgba(52, 199, 89, 0.2); }
+.delta-neg { background: rgba(255, 59, 48, 0.15); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 0.3); box-shadow: 0 0 10px rgba(255, 59, 48, 0.2); }
+.delta-neu { background: rgba(255, 255, 255, 0.05); color: var(--text3); border: 1px solid var(--border2); }
+
+.comp-narrative { background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); padding: 24px; border-radius: var(--radius); margin-bottom: 32px; line-height: 1.8; color: var(--text2); font-size: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+.comp-narrative strong { color: #FFF; font-weight: 700; text-shadow: 0 0 5px rgba(255,255,255,0.3); }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(3, 7, 18, 0.9); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(12px); }
+.modal-overlay.active { display: flex; }
+.modal-box { background: var(--surface-modal); border-radius: 24px; width: 720px; max-width: 94vw; max-height: 90vh; overflow-y: auto; padding: 40px; box-shadow: 0 20px 50px rgba(0, 240, 255, 0.1); border: 2px solid var(--cobalt); }
+.modal-box h3 { font-size: 24px; color: var(--white); margin-bottom: 6px; font-weight: 800; letter-spacing: -0.5px; }
+.nm-case { font-size: 11px; color: var(--cobalt); font-weight: 700; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1.5px; background: rgba(0,240,255,0.07); padding: 6px 12px; border-radius: 6px; width: fit-content; border: 1px solid rgba(0,240,255,0.2); }
+.modal-grid-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 24px; }
+.info-block-card { background: #1B253A; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; }
+.info-block-card .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 700; }
+.info-block-card .val { font-size: 13px; color: var(--white); font-weight: 600; }
+.nm-desc { font-size: 13.5px; line-height: 1.7; color: #F1F5F9; white-space: pre-wrap; background: #0A0F1D; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05); }
+
+/* AI Architect Panel Styles */
+.ai-module { border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid rgba(139, 92, 246, 0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+.ai-header { background: rgba(139, 92, 246, 0.1); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(139, 92, 246, 0.2); }
+.ai-title { font-size: 15px; font-weight: 800; color: var(--white); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; transition: color 0.2s; display: flex; align-items: center;}
+.ai-title:hover { color: #C4B5FD; }
+.ai-case { font-size: 12px; color: #A78BFA; margin-top: 4px; font-weight: 600;}
+.ai-deadline { text-align: right; }
+.ai-dl-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: 700;}
+.ai-dl-val { font-size: 14px; font-weight: 800; color: var(--red); background: rgba(255,59,48,0.1); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,59,48,0.2);}
+.ai-body { padding: 20px; background: rgba(15, 21, 36, 0.6); }
+.ai-prereq-lbl { font-size: 12px; font-weight: 700; color: #C4B5FD; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;}
+.ai-req-grid { display: grid; gap: 10px; }
+.ai-req-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 8px; font-size: 13px; border: 1px solid transparent;}
+.ai-req-covered { background: rgba(52, 199, 89, 0.05); border-color: rgba(52, 199, 89, 0.2); }
+.ai-req-missing { background: rgba(255, 204, 0, 0.05); border-color: rgba(255, 204, 0, 0.2); }
+.ai-req-name { font-weight: 600; color: var(--text2); display: flex; align-items: center; gap: 8px;}
+.ai-req-meta { font-size: 11px; color: var(--text3); }
+.ai-task-link { color: var(--cobalt); cursor: pointer; text-decoration: underline; font-weight: 600; transition: color 0.2s;}
+.ai-task-link:hover { color: var(--white); }
+.ai-lawtoolbox-tag { font-size:10px; background:rgba(0, 240, 255, 0.15); color:var(--cobalt); padding:3px 8px; border-radius:4px; margin-left:8px; border:1px solid rgba(0, 240, 255, 0.3); vertical-align: middle; white-space: nowrap; text-decoration: none !important;}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes expandPanel { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.anim { animation: expandPanel 0.4s ease forwards; opacity: 0; }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text3); font-size: 14px; border: 1px dashed var(--border); border-radius: var(--radius); background: rgba(255,255,255,0.02);}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loader-spinner"></div>
+  <div class="loader-text" id="loader-msg">Analyzing Dataset...</div>
+  <div class="loader-sub">Building data model and operational metrics. Please wait.</div>
+</div>
+
+<div id="upload-screen">
+  <div class="logo-container">
+    <img class="logo-img" id="main-logo" alt="GLA Group Logo" src="Logotipo_ JAL LAW.png">
+  </div>
+  <div class="brand-sub">Global Legal Advisors</div>
+  <div class="brand-title">GLA Task Tracker <span class="version-tag">v37.0</span></div>
+
+  <div class="upload-zone" id="upload-zone" title="Click to upload your exported .xlsx file from Planner">
+    <div class="upload-icon">📁</div>
+    <div class="upload-title">Upload Planner Export File</div>
+    <div class="upload-hint">
+      Drag your Excel <em>.xlsx</em> file here or click to browse<br>
+      (Optimized to automatically process Consolidated Sheets)
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+  </div>
+
+  <div class="instructions-box">
+    <h3>📋 Format Verification Matrix</h3>
+    <ol>
+      <li>System automatically ingests multi-sheet books from Microsoft Planner Premium.</li>
+      <li>Cross-references <strong>"Datos consolidados"</strong> or <strong>"Tareas"</strong> sheet elements dynamically.</li>
+    </ol>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <img class="logo-img" id="bar-logo" alt="GLA Group Logo" src="Logotipo_ JAL LAW.png">
+      <div class="top-bar-titles">
+        <div class="app-header-title">GLA Task Tracker <span class="version-tag" style="font-size:12px; padding:2px 8px;">v37.0</span></div>
+        <div class="top-bar-meta">
+          <div>Plan Manager: <strong id="plan-name">—</strong></div>
+          <div>Timeline: <strong id="export-date">—</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn" onclick="exportToExcel()" title="Export your currently filtered task matrix into a new Excel file.">📥 Export Matrix</button>
+      <button class="btn-accent btn" onclick="downloadSnapshot()" title="Capture and download a high-resolution image of the current dashboard.">⬇ Capture Dashboard</button>
+      <button class="btn" onclick="goBack()" title="Reset the application and clear all session data.">← Reset Session</button>
+    </div>
+  </div>
+
+  <div class="dashboard-body" id="capture-area">
+    
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <div class="filter-bar">
+      <span class="filter-label" title="Use these dropdowns to globally filter the dashboard data">Filters:</span>
+      <select class="filter-select" id="filter-case" title="Filter dashboard data by specific case or matter"><option value="">All Cases</option></select>
+      <select class="filter-select" id="filter-bucket" title="Filter dashboard data by specific workflow stage"><option value="">All Stages</option></select>
+      <select class="filter-select" id="filter-status" title="Filter dashboard data by execution status">
+        <option value="">All Statuses</option>
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+        <option value="_not_completed">Pending (Active)</option>
+      </select>
+      <select class="filter-select" id="filter-assignee" title="Filter dashboard data by team member"><option value="">All Users</option></select>
+      
+      <select class="filter-select" id="filter-date" title="Filter tasks by specific deadline windows">
+        <option value="">All Dates</option>
+        <option value="overdue">Overdue</option>
+        <option value="today">Due Today</option>
+        <option value="this_week">Due This Week</option>
+        <option value="next_week">Due Next Week</option>
+        <option value="next_month">Due Next Month</option>
+      </select>
+
+      <input type="text" class="search-input" id="search-input" placeholder="Search tasks, metadata..." title="Type to search globally by text in name, case, stage, assignees or notes">
+      <button class="btn-clear" onclick="clearAllFilters()" title="Remove all active filters and show all baseline data">✕ Clear</button>
+    </div>
+
+    <div class="view-tabs" id="main-view-tabs">
+      <button class="view-tab active" data-view="table" onclick="switchView('table')" title="View detailed, sortable task grid">📋 Task Matrix</button>
+      <button class="view-tab" data-view="cases" onclick="switchView('cases')" title="View tasks logically grouped by Case/Matter">📂 By Case / Matter</button>
+      <button class="view-tab" data-view="people" onclick="switchView('people')" title="View workloads and completion tracking by User">👤 Workload by User</button>
+      <button class="view-tab" data-view="strategic" onclick="switchView('strategic')" title="View algorithmic operational insights, AI analysis, and risks">⚡ Strategic Watch</button>
+      <button class="view-tab" data-view="charts" onclick="switchView('charts')" title="View visual data intelligence panels">📊 Advanced Analytics</button>
+      <button class="view-tab compare-tab" id="tab-compare" data-view="compare" onclick="switchView('compare')" title="Comparative analysis between two Excel datasets">⚖️ Comparative Analysis</button>
+    </div>
+
+    <div id="view-standard">
+
+        <div id="view-table">
+          <div class="section-title">General Task Registry Control <span class="count" id="task-count">0</span> <span class="help-icon" title="Shows a detailed list of tasks based on your current filters and active KPI selections. Click headers to sort.">❓</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-sort="name" title="Sort by Task Title" style="width:30%">Task Title <span class="sort-arrow">▼</span></th>
+                  <th data-sort="case" title="Sort by Case Matter" style="width:22%">Case / Matter <span class="sort-arrow">▼</span></th>
+                  <th data-sort="bucket" title="Sort by Workflow Stage" style="width:14%">Stage <span class="sort-arrow">▼</span></th>
+                  <th data-sort="status" title="Sort by Execution Status" style="width:10%">Status <span class="sort-arrow">▼</span></th>
+                  <th data-sort="priority" title="Sort by Urgency Priority" style="width:8%">Priority <span class="sort-arrow">▼</span></th>
+                  <th data-sort="assignee" title="Sort by Primary Assigned Staff" style="width:12%">Assigned Staff <span class="sort-arrow">▼</span></th>
+                  <th data-sort="due" title="Sort by Chronological Deadline" style="width:14%">Timeline <span class="sort-arrow">▼</span></th>
+                </tr>
+              </thead>
+              <tbody id="task-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="view-charts" style="display:none">
+          <div class="charts-grid-expanded">
+            <div class="chart-card-full span-3" id="card-days-case">
+              <h3 title="Shows remaining or overdue days for active tasks in a selected case. Negative indicates overdue.">
+                  Days to Deadline / Overdue by Case <span id="title-label-case" style="color:var(--cobalt); margin-left:6px; font-weight:800; text-transform:none;"></span>
+                  <select id="chart-case-select" class="chart-select" title="Select a case to view its specific tasks trajectory" onchange="renderChartDaysCase()"></select>
+              </h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-days-case"></canvas></div>
+            </div>
+            <div class="chart-card-full span-3" id="card-days-user">
+              <h3 title="Shows remaining or overdue days for active tasks assigned to a specific user.">
+                  Days to Deadline by User <span id="title-label-user" style="color:var(--cobalt); margin-left:6px; font-weight:800; text-transform:none;"></span>
+                  <select id="chart-user-select" class="chart-select" title="Select a user to view their active task timelines" onchange="renderChartDaysUser()"></select>
+              </h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-days-user"></canvas></div>
+            </div>
+
+            <div class="chart-card-full span-1">
+              <h3 title="Displays overall task breakdown by current completion status.">Execution Status <span class="help-icon" title="Global view of tasks by Status">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-status-canvas"></canvas></div>
+            </div>
+            <div class="chart-card-full span-1">
+              <h3 title="Shows the ratio of High Priority tasks vs Medium/Low Priority tasks.">Priority Distribution <span class="help-icon" title="High vs Normal Priority balance">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-priority-canvas"></canvas></div>
+            </div>
+            <div class="chart-card-full span-1">
+              <h3 title="Highlights which workflow buckets currently hold the most tasks.">Bottlenecks by Stage <span class="help-icon" title="Task volume concentrated in Planner Buckets">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-stages-canvas"></canvas></div>
+            </div>
+            
+            <div class="chart-card-full span-3">
+              <h3 title="Breaks down total tasks per matter, indicating how many are Complete, In Progress, or Not Started.">Tasks per Case by Status <span class="help-icon" title="Stacked completion health per Matter">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-case-status"></canvas></div>
+            </div>
+            <div class="chart-card-full span-3">
+              <h3 title="Cross-analyzes cases based on deadline health: Overdue, Due Today, Next Week, etc.">Tasks per Case by Date Status <span class="help-icon" title="Chronological risk distribution across Matters">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-case-date"></canvas></div>
+            </div>
+
+            <div class="chart-card-full span-3">
+              <h3 title="Identifies the workload volume of each case, stacked by priority.">Volume & Priority by Case <span class="help-icon" title="Matter volume mapped against task urgency">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-cases-canvas"></canvas></div>
+            </div>
+            <div class="chart-card-full span-2">
+              <h3 title="Visualizes the productivity of each team member (Completed vs Active vs Overdue).">Performance Balance by User <span class="help-icon" title="Individual staff execution metrics">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-team-canvas"></canvas></div>
+            </div>
+            <div class="chart-card-full span-1">
+              <h3 title="Comparative trend line showing the relationship between task closures and delays per user.">Overdue vs Completed by Assignee <span class="help-icon" title="Trend evaluation of success vs delay">❓</span></h3>
+              <div class="chart-wrapper-inside"><canvas id="chart-assignee-lines"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="view-cases" style="display:none">
+          <div class="section-title">Active Matters Structure <span class="count" id="case-count">0</span> <span class="help-icon" title="Groups tasks logically by Case/Matter. Affected by Top Filters AND KPI selections.">❓</span></div>
+          <div class="cases-grid" id="cases-grid"></div>
+        </div>
+
+        <div id="view-people" style="display:none">
+          <div class="section-title">Resource Allocation Matrix <span class="count" id="people-count">0</span> <span class="help-icon" title="Groups tasks logically by User. Affected by Top Filters AND KPI selections.">❓</span></div>
+          <div id="people-container"></div>
+        </div>
+
+        <div id="view-strategic" style="display:none">
+          <div class="section-title">Strategic Control & Operational Watch</div>
+          <div class="strategic-grid">
+            
+            <div class="strategic-card" style="grid-column: span 2; border-color: rgba(139, 92, 246, 0.4);">
+              <h3 style="color:#C4B5FD;" title="Analyzes upcoming key deadlines (next 30 days) identified by keyword or bucket. Suggests missing prerequisite tasks based on senior litigation knowledge.">⚖️ U.S. Civil Litigation Architect: 30-Day Deadline Analysis <span class="help-icon" title="Operates purely on Case/User filters. Identifies prerequisites for upcoming critical events.">❓</span></h3>
+              <div id="strategic-ai-analysis" style="margin-top: 8px;"></div>
+            </div>
+
+            <div class="strategic-card">
+              <h3 title="Lists active tasks that have already missed their targeted deadline.">🚨 Critical Overdue & Immediate Risks <span class="help-icon" title="Tasks currently in breach of deadline">❓</span></h3>
+              <div class="strategic-list" id="strategic-overdue-list"></div>
+            </div>
+            <div class="strategic-card">
+              <h3 title="Displays tasks with deep delays or heavy workloads indicating a severe obstruction.">🔥 Bottlenecks <span class="help-icon" title="High friction elements requiring intervention">❓</span></h3>
+              <div class="strategic-list" id="strategic-bottlenecks-list"></div>
+            </div>
+
+            <div class="strategic-card">
+              <h3 title="Calculates % of completion strictly for tasks that were either DUE or COMPLETED in the last 30 days.">⚡ Velocity Rate Insights (Last 30 Days) <span class="help-icon" title="Recent execution momentum by User">❓</span></h3>
+              <div class="strategic-list" id="strategic-velocity-list"></div>
+            </div>
+            <div class="strategic-card">
+              <h3 title="Forward-looking timeline showing all tasks with a deadline approaching in the next 30 days.">📅 Upcoming Critical Tasks and Cases Deadlines (Next 30 Days) <span class="help-icon" title="Lookahead radar for impending limits">❓</span></h3>
+              <div class="strategic-list" id="strategic-upcoming-list"></div>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <div id="view-compare" style="display:none;">
+        <div id="compare-empty-state" style="text-align:center; padding: 60px;">
+            <div style="font-size: 48px; margin-bottom: 20px;">⚖️</div>
+            <h2 style="color:var(--white); margin-bottom: 16px;">Comparative Data Analysis</h2>
+            <p style="color:var(--text3); margin-bottom: 24px;">Upload a second dataset to compare KPIs, workflows, and team performance between two periods.</p>
+            <button class="btn view-tab compare-tab" onclick="comparePeriods()" title="Select a second Excel dataset to load the comparative view" style="font-size: 16px; padding: 12px 24px;">📁 Select Second Dataset</button>
+        </div>
+        
+        <div id="compare-dashboard-content" style="display:none;">
+            <div class="section-title" style="color:#C4B5FD;">⚖️ Comparative Data Analysis <span class="count" style="border-color:#8B5CF6; color:#E0E7FF;" id="compare-meta">P1 vs P2</span></div>
+            
+            <div class="kpi-row" id="diff-kpi-row" style="margin-bottom: 24px;"></div>
+            
+            <div class="filter-bar" style="border-color:rgba(139, 92, 246, 0.4); margin-bottom: 16px;">
+                <select class="filter-select" id="comp-filter-case" onchange="renderDiffTable()"><option value="">All Cases</option></select>
+                <select class="filter-select" id="comp-filter-assignee" onchange="renderDiffTable()"><option value="">All Assignees</option></select>
+                <input type="text" class="search-input" id="comp-search-input" placeholder="Search tasks..." oninput="renderDiffTable()">
+            </div>
+
+            <div id="diff-record-count" style="font-size:12px; color:var(--text3); margin-bottom:8px; font-weight: 600;">Showing 0 records</div>
+
+            <div class="table-wrap" style="border-color:rgba(139, 92, 246, 0.4); margin-bottom: 48px;">
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:12%">Change</th>
+                        <th style="width:30%">Task</th>
+                        <th style="width:20%">Case</th>
+                        <th style="width:10%">Status</th>
+                        <th style="width:14%">Assigned</th>
+                        <th style="width:14%">Due Date</th>
+                    </tr>
+                    </thead>
+                    <tbody id="diff-table-body"></tbody>
+                </table>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(139, 92, 246, 0.2); margin: 40px 0;">
+
+            <div class="section-title" style="color:#FFF; font-size:18px;">Macro Trend Analysis</div>
+            <div class="comp-narrative" id="compare-narrative"></div>
+            <div class="kpi-row" id="compare-kpi-row"></div>
+            
+            <div class="charts-grid-expanded">
+                <div class="chart-card-full span-1" style="border-color:rgba(139, 92, 246, 0.3);">
+                    <h3 style="color:#E0E7FF;" title="Maps overall operational health across Volume, Resolution, Efficiency, and Risk factors.">Execution Profile (Radar 3D) <span class="help-icon" title="Multi-dimensional health check">❓</span></h3>
+                    <div class="chart-wrapper-inside"><canvas id="comp-chart-radar"></canvas></div>
+                </div>
+                <div class="chart-card-full span-1" style="border-color:rgba(139, 92, 246, 0.3);">
+                    <h3 style="color:#E0E7FF;" title="Direct volume comparison of task statuses between both periods.">Comparative Execution Output <span class="help-icon" title="Volume Delta by Status">❓</span></h3>
+                    <div class="chart-wrapper-inside"><canvas id="comp-chart-status"></canvas></div>
+                </div>
+                <div class="chart-card-full span-1" style="border-color:rgba(139, 92, 246, 0.3);">
+                    <h3 style="color:#E0E7FF;" title="Analyzes the change in High Priority ratios between datasets.">Priority Shift <span class="help-icon" title="Urgency drift between datasets">❓</span></h3>
+                    <div class="chart-wrapper-inside"><canvas id="comp-chart-priority"></canvas></div>
+                </div>
+                
+                <div class="chart-card-full span-3" style="border-color:rgba(139, 92, 246, 0.3);">
+                    <h3 style="color:#E0E7FF;" title="Volume variations in cases broken down by task statuses.">Tasks per Case by Status (Comparative) <span class="help-icon" title="Case-level resolution variance">❓</span></h3>
+                    <div class="chart-wrapper-inside"><canvas id="comp-chart-case-status"></canvas></div>
+                </div>
+
+                <div class="chart-card-full span-3" style="border-color:rgba(139, 92, 246, 0.3);">
+                    <h3 style="color:#E0E7FF;" title="Shows how tasks have moved across pipeline stages between periods.">Stage Migration & Bottleneck Shift <span class="help-icon" title="Pipeline throughput variation">❓</span></h3>
+                    <div class="chart-wrapper-inside"><canvas id="comp-chart-stages"></canvas></div>
+                </div>
+                <div class="chart-card-full span-3" style="border-color:rgba(139, 92, 246, 0.3);">
+                    <h3 style="color:#E0E7FF;" title="Delta comparison for team members' completion rates vs risks.">Workload Output by Assignee (Comparative) <span class="help-icon" title="Staff performance variance">❓</span></h3>
+                    <div class="chart-wrapper-inside"><canvas id="comp-chart-assignee"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="section-title" style="color:#FFF; font-size:18px; margin-top:40px;">Detailed Delta Matrix (Case by Case) <span class="help-icon" title="Mathematical breakdown of volume and risk deltas for all matched cases.">❓</span></div>
+            <div class="table-wrap" style="border-color:rgba(139, 92, 246, 0.3);">
+            <table>
+                <thead>
+                <tr>
+                    <th title="Matter Name">Case / Matter Name</th>
+                    <th title="Total tasks in Dataset 1">Vol P1</th>
+                    <th title="Total tasks in Dataset 2">Vol P2</th>
+                    <th title="Difference in Volume">Vol Delta</th>
+                    <th title="Completed tasks in Dataset 1">Completed P1</th>
+                    <th title="Completed tasks in Dataset 2">Completed P2</th>
+                    <th title="Difference in Completions">Completion Delta</th>
+                    <th title="Overdue tasks in Dataset 1">Overdue P1</th>
+                    <th title="Overdue tasks in Dataset 2">Overdue P2</th>
+                    <th title="Difference in Overdue Risks">Risk Delta</th>
+                </tr>
+                </thead>
+                <tbody id="comp-table-body"></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="notes-modal" onclick="if(event.target===this)closeNotes()">
+  <div class="modal-box">
+    <button class="nm-close" onclick="closeNotes()" title="Close details panel">✕ Close</button>
+    <h3 id="nm-title">—</h3>
+    <div class="nm-case" id="nm-case">—</div>
+    <div class="modal-grid-info" id="nm-meta-grid"></div>
+    <div style="font-size:11px; font-weight:800; color:var(--cobalt); text-transform:uppercase; margin-bottom:8px;">Task Description & Narrative Logs</div>
+    <div class="nm-desc" id="nm-desc">—</div>
+  </div>
+</div>
+
+<input type="file" id="file-compare-input" accept=".xlsx,.xls" style="display:none">
+
+<script>
+function sanitize(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+let allTasks = [];
+let compareTasks = [];
+let diffTasksGlobal = []; 
+let currentFilteredTasks = []; 
+let activeAssigneesGlobal = [];
+let isCompareMode = false;
+let activeKpiFilter = null; 
+let activeDiffKpiFilter = 'total'; 
+let sortCol = 'due';
+let sortAsc = true;
+let caseColors = {};
+let renderedCharts = {};
+const palette = ['#00F0FF', '#3B82F6', '#10B981', '#FBBF24', '#A78BFA', '#EC4899', '#06B6D4', '#F43F5E'];
+
+const DICTIONARY = {
+  id: ['id. de tarea', 'task id', 'id de tarea', 'taskid', 'id', 'id. de tarea '],
+  name: ['nombre de la tarea', 'task name', 'title', 'nombre', 'tarea', 'task'],
+  bucket: ['nombre del depósito', 'bucket name', 'depósito', 'deposito', 'bucket', 'depósitos', 'depositos', 'nombre del deposito'],
+  status: ['progreso', 'progress', 'status', 'estado', 'progreso de la tarea'],
+  priority: ['prioridad', 'priority'],
+  assignees: ['asignado a', 'assigned to', 'asignado', 'responsables', 'assignees'],
+  dueDate: ['fecha de vencimiento', 'due date', 'fecha vencimiento', 'vencimiento'],
+  completedDate: ['fecha de finalización', 'completed date', 'fecha finalizacion', 'fecha de finalizacion', 'fecha completado', 'completed'],
+  isOverdue: ['con retraso', 'is overdue', 'retraso', 'overdue'],
+  labels: ['etiquetas', 'labels', 'tags', 'categorías', 'categorias'],
+  description: ['descripción', 'description', 'notas', 'notes']
+};
+
+function getRowValue(row, dictKey) {
+  const variations = DICTIONARY[dictKey];
+  if (!variations) return ''; 
+  const keys = Object.keys(row);
+  for (const v of variations) {
+    const found = keys.find(k => k.trim().toLowerCase() === v.toLowerCase());
+    if (found) return row[found];
+  }
+  for (const v of variations) {
+    const found = keys.find(k => k.trim().toLowerCase().includes(v.toLowerCase()));
+    if (found) return row[found];
+  }
+  return '';
+}
+
+function parseExcelDate(val) {
+  if (!val) return null;
+  if (typeof val === 'number') {
+      const date = new Date((val - 25569) * 86400000);
+      return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+  }
+  const p = new Date(val);
+  return isNaN(p.getTime()) ? null : p;
+}
+
+function parseTask(r, index) {
+  const name = String(getRowValue(r, 'name') || '').trim();
+  const rawId = String(getRowValue(r, 'id') || '').trim();
+  const id = rawId || ('_auto_' + index + '_' + name.slice(0,15).replace(/[^a-zA-Z0-9]/g,'_'));
+
+  const rawStatus = String(getRowValue(r, 'status') || 'No iniciado').trim().toLowerCase();
+  let status = 'Not Started';
+  if (rawStatus === 'en curso' || rawStatus === 'in progress') status = 'In Progress';
+  if (rawStatus === 'completado' || rawStatus === 'completed') status = 'Completed';
+
+  const rawPriority = String(getRowValue(r, 'priority') || 'Medium').trim().toLowerCase();
+  let priority = 'Medium';
+  if (rawPriority.includes('importan') || rawPriority.includes('high') || rawPriority.includes('alta') || rawPriority.includes('urgent') || rawPriority === '1' || rawPriority === '2') priority = 'High';
+
+  const dueDate = parseExcelDate(getRowValue(r, 'dueDate'));
+  const completedDate = parseExcelDate(getRowValue(r, 'completedDate'));
+  
+  let isOverdue = false;
+  if (dueDate && status !== 'Completed') {
+      const d = new Date(dueDate); d.setHours(0,0,0,0);
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (d < today) isOverdue = true;
+  }
+
+  const assigneesRaw = getRowValue(r, 'assignees');
+  const assignees = assigneesRaw ? String(assigneesRaw).split(/[;]/).map(s=>s.trim()).filter(Boolean) : [];
+
+  return {
+    id, name, isOverdue, priority, status, assignees,
+    bucket: String(getRowValue(r, 'bucket') || 'General').trim(),
+    dueDate: dueDate,
+    completedDate: completedDate,
+    caseName: String(getRowValue(r, 'labels') || 'Unassigned').trim(),
+    description: String(getRowValue(r, 'description') || '')
+  };
+}
+
+function selectCorrectSheet(wb) {
+  const desiredSheets = ['datos consolidados', 'consolidated data', 'tareas', 'tasks', 'data'];
+  for (let d of desiredSheets) {
+    let found = wb.SheetNames.find(name => name.trim().toLowerCase() === d);
+    if (found) return wb.Sheets[found];
+  }
+  return wb.Sheets[wb.SheetNames[0]]; 
+}
+
+function handleUpload(file) {
+  document.getElementById('loader-msg').textContent = "Analyzing Dataset...";
+  document.getElementById('loading-overlay').style.display = 'flex';
+  
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      try {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          if (wb.SheetNames.includes('Planificar')) {
+            const info = XLSX.utils.sheet_to_json(wb.Sheets['Planificar'], { header: 1 });
+            document.getElementById('plan-name').textContent = info[1]?.[1] || 'GLA Core Plan';
+            document.getElementById('export-date').textContent = info[1]?.[2] || 'Live Data';
+          } else {
+            document.getElementById('plan-name').textContent = file.name.replace(/\.[^/.]+$/, "");
+            document.getElementById('export-date').textContent = 'Consolidated File';
+          }
+          const targetedSheet = selectCorrectSheet(wb);
+          const rows = XLSX.utils.sheet_to_json(targetedSheet);
+          
+          allTasks = rows.filter((r) => {
+            const tName = String(getRowValue(r, 'name') || '').trim();
+            return tName && tName.toUpperCase() !== 'TEMPLATE' && tName.toUpperCase() !== 'PLANTILLA';
+          }).map((r, i) => parseTask(r, i));
+
+          const cases = [...new Set(allTasks.map(t => t.caseName))].sort();
+          cases.forEach((c, i) => { caseColors[c] = palette[i % palette.length]; });
+
+          document.getElementById('upload-screen').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          
+          populateFilters();
+          renderDashboard();
+          document.getElementById('loading-overlay').style.display = 'none';
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading-overlay').style.display = 'none';
+        alert("Error parsing document: " + err.message);
+      }
+    }, 150);
+  });
+}
+
+function comparePeriods() { document.getElementById('file-compare-input').click(); }
+
+document.getElementById('file-compare-input').addEventListener('change', function(e) {
+  if (e.target.files.length) processCompareFile(e.target.files[0]);
+});
+
+function getDatasetMaxDate(tasks) {
+    let max = 0;
+    tasks.forEach(t => {
+        if (t.dueDate) max = Math.max(max, t.dueDate.getTime());
+        if (t.completedDate) max = Math.max(max, t.completedDate.getTime());
+    });
+    return max;
+}
+
+function processCompareFile(file) {
+  document.getElementById('loader-msg').textContent = "Processing Comparative Analysis...";
+  document.getElementById('loading-overlay').style.display = 'flex';
+  
+  setTimeout(() => {
+    try {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const targetedSheet = selectCorrectSheet(wb);
+        const rows = XLSX.utils.sheet_to_json(targetedSheet);
+        
+        compareTasks = rows.filter((r) => {
+          const tName = String(getRowValue(r, 'name') || '').trim();
+          return tName && tName.toUpperCase() !== 'TEMPLATE' && tName.toUpperCase() !== 'PLANTILLA';
+        }).map((r, i) => parseTask(r, i));
+
+        document.getElementById('compare-meta').textContent = `P1 vs P2`;
+        isCompareMode = true; 
+        document.getElementById('compare-empty-state').style.display = 'none';
+        document.getElementById('compare-dashboard-content').style.display = 'block';
+        
+        switchView('compare'); 
+        renderDashboard(); 
+        
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('file-compare-input').value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      console.error(err);
+      document.getElementById('loading-overlay').style.display = 'none';
+      alert("Error parsing comparative document: " + err.message);
+    }
+  }, 150);
+}
+
+function getDeltaB(v1, v2, inv = false) {
+    let delta = v2 - v1;
+    let pct = v1 === 0 ? (v2>0?100:0) : Math.round((Math.abs(delta)/v1)*100);
+    let isGood = inv ? delta <= 0 : delta >= 0;
+    let bClass = delta === 0 ? 'delta-neu' : (isGood ? 'delta-pos' : 'delta-neg');
+    let sign = delta > 0 ? '+' : '';
+    return `<span class="delta-badge ${bClass}">${sign}${delta} (${sign}${pct}%)</span>`;
+}
+
+function toggleDiffKpi(filterId) {
+    activeDiffKpiFilter = activeDiffKpiFilter === filterId ? 'total' : filterId;
+    document.querySelectorAll('#diff-kpi-row .kpi-card').forEach(c => {
+        c.style.borderColor = 'var(--border)';
+        c.style.boxShadow = 'var(--shadow)';
+    });
+    const activeCard = document.getElementById(`diff-kpi-${activeDiffKpiFilter}`);
+    if (activeCard) {
+        activeCard.style.borderColor = 'var(--white)';
+        activeCard.style.boxShadow = '0 0 20px rgba(255,255,255,0.4)';
+    }
+    renderDiffTable();
+}
+
+function calculateDiffData(p1Tasks, p2Tasks) {
+    diffTasksGlobal = [];
+    let p1Map = new Map(); p1Tasks.forEach(t => p1Map.set(t.id, t));
+    let p2Map = new Map(); p2Tasks.forEach(t => p2Map.set(t.id, t));
+
+    let stats = { new: 0, newlyCompleted: 0, stillPending: 0, removed: 0, 
+                  o1: p1Tasks.filter(t => t.isOverdue && t.status !== 'Completed').length,
+                  o2: p2Tasks.filter(t => t.isOverdue && t.status !== 'Completed').length,
+                  t1: p1Tasks.length, t2: p2Tasks.length };
+
+    p2Tasks.forEach(t2 => {
+        let t1 = p1Map.get(t2.id);
+        if (!t1) t1 = p1Tasks.find(x => x.name === t2.name && x.caseName === t2.caseName);
+
+        let changeType = 'Unchanged';
+        if (!t1) {
+            changeType = 'New';
+            stats.new++;
+        } else {
+            if (t2.status === 'Completed' && t1.status !== 'Completed') {
+                changeType = 'Newly Completed';
+                stats.newlyCompleted++;
+            } else if (t2.status !== 'Completed' && t1.status !== 'Completed') {
+                changeType = 'Still Pending';
+                stats.stillPending++;
+            }
+        }
+        diffTasksGlobal.push({ task: t2, changeType: changeType, p1Task: t1 });
+    });
+
+    p1Tasks.forEach(t1 => {
+        let t2 = p2Map.get(t1.id);
+        if (!t2) t2 = p2Tasks.find(x => x.name === t1.name && x.caseName === t1.caseName);
+        if (!t2) {
+            stats.removed++;
+            diffTasksGlobal.push({ task: t1, changeType: 'Removed', p1Task: t1 });
+        }
+    });
+
+    const diffCases = [...new Set(diffTasksGlobal.map(d => d.task.caseName))].sort();
+    const diffAssigneesRaw = diffTasksGlobal.reduce((acc, d) => acc.concat(d.task.assignees), []);
+    const diffAssignees = [...new Set(diffAssigneesRaw)].filter(Boolean).sort();
+    fillSelect('comp-filter-case', diffCases, 'All Cases');
+    fillSelect('comp-filter-assignee', diffAssignees, 'All Assignees');
+
+    const diffDelta = stats.t2 - stats.t1;
+    const diffSign = diffDelta > 0 ? '+' : '';
+    const diffColor = diffDelta > 0 ? 'var(--green)' : (diffDelta < 0 ? 'var(--red)' : 'var(--text3)');
+    
+    const odDelta = stats.o2 - stats.o1;
+    const odSign = odDelta > 0 ? '+' : '';
+    const odColor = odDelta > 0 ? 'var(--red)' : (odDelta < 0 ? 'var(--green)' : 'var(--text3)');
+
+    const footerHtml = (v1, v2) => `
+        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text3); background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+              <span>P1: <strong style="color:var(--white); font-size: 14px;">${v1}</strong></span>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <span>P2: <strong style="color:var(--white); font-size: 14px;">${v2}</strong></span>
+        </div>`;
+
+    document.getElementById('diff-kpi-row').innerHTML = `
+      <div class="kpi-card c-cobalt anim" id="diff-kpi-total" onclick="toggleDiffKpi('total')" style="${activeDiffKpiFilter==='total'?'border-color:var(--white); box-shadow:0 0 20px rgba(255,255,255,0.4);':''}">
+          <div class="kpi-label" style="color:var(--cobalt);">TOTAL TASKS</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="color:#FFF; font-size: 32px;">${stats.t2}</div>
+              <span class="delta-badge" style="font-size: 13px; padding: 5px 12px; color:${diffColor}; border-color:${diffColor};">${diffSign}${diffDelta} net</span>
+          </div>
+          ${footerHtml(stats.t1, stats.t2)}
+      </div>
+
+      <div class="kpi-card c-mint anim" id="diff-kpi-new" onclick="toggleDiffKpi('new')" style="${activeDiffKpiFilter==='new'?'border-color:var(--white); box-shadow:0 0 20px rgba(255,255,255,0.4);':''}">
+          <div class="kpi-label" style="color:var(--mint);">NEW TASKS</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="color:var(--green); font-size: 32px;">${stats.new}</div>
+              <span class="delta-badge delta-pos" style="font-size: 13px; padding: 5px 12px;">+${stats.new} added</span>
+          </div>
+          ${footerHtml(0, stats.new)}
+      </div>
+
+      <div class="kpi-card c-green anim" id="diff-kpi-done" onclick="toggleDiffKpi('done')" style="${activeDiffKpiFilter==='done'?'border-color:var(--white); box-shadow:0 0 20px rgba(255,255,255,0.4);':''}">
+          <div class="kpi-label" style="color:var(--green);">NEWLY COMPLETED</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="color:var(--green); font-size: 32px;">${stats.newlyCompleted}</div>
+              <span class="delta-badge delta-pos" style="font-size: 13px; padding: 5px 12px;">+${stats.newlyCompleted} done</span>
+          </div>
+          ${footerHtml(0, stats.newlyCompleted)}
+      </div>
+
+      <div class="kpi-card c-yellow anim" id="diff-kpi-pending" onclick="toggleDiffKpi('pending')" style="${activeDiffKpiFilter==='pending'?'border-color:var(--white); box-shadow:0 0 20px rgba(255,255,255,0.4);':''}">
+          <div class="kpi-label" style="color:var(--yellow);">STILL PENDING</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="color:var(--yellow); font-size: 32px;">${stats.stillPending}</div>
+          </div>
+          ${footerHtml(stats.stillPending, stats.stillPending)}
+      </div>
+
+      <div class="kpi-card c-red anim" id="diff-kpi-overdue" onclick="toggleDiffKpi('overdue')" style="${activeDiffKpiFilter==='overdue'?'border-color:var(--white); box-shadow:0 0 20px rgba(255,255,255,0.4);':''}">
+          <div class="kpi-label" style="color:var(--red);">OVERDUE TASKS</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="font-size: 32px;">${stats.o2}</div>
+              <span class="delta-badge" style="font-size: 13px; padding: 5px 12px; color:${odColor}; border-color:${odColor};">${odSign}${odDelta} risk</span>
+          </div>
+          ${footerHtml(stats.o1, stats.o2)}
+      </div>
+
+      <div class="kpi-card c-purple anim" id="diff-kpi-removed" onclick="toggleDiffKpi('removed')" style="${activeDiffKpiFilter==='removed'?'border-color:var(--white); box-shadow:0 0 20px rgba(255,255,255,0.4);':''}">
+          <div class="kpi-label" style="color:#A78BFA;">REMOVED TASKS</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="color:var(--red); font-size: 32px;">${stats.removed}</div>
+              <span class="delta-badge delta-neg" style="font-size: 13px; padding: 5px 12px;">-${stats.removed} removed</span>
+          </div>
+          ${footerHtml(stats.removed, 0)}
+      </div>
+    `;
+    
+    renderDiffTable();
+}
+
+function renderDiffTable() {
+    const fc = document.getElementById('comp-filter-case').value;
+    const fa = document.getElementById('comp-filter-assignee').value;
+    const q = document.getElementById('comp-search-input').value.toLowerCase();
+    
+    const filtered = diffTasksGlobal.filter(d => {
+        if (activeDiffKpiFilter === 'new' && d.changeType !== 'New') return false;
+        if (activeDiffKpiFilter === 'done' && d.changeType !== 'Newly Completed') return false;
+        if (activeDiffKpiFilter === 'pending' && d.changeType !== 'Still Pending') return false;
+        if (activeDiffKpiFilter === 'removed' && d.changeType !== 'Removed') return false;
+        if (activeDiffKpiFilter === 'overdue' && (!d.task.isOverdue || d.task.status === 'Completed' || d.changeType === 'Removed')) return false;
+
+        if (fc && d.task.caseName !== fc) return false;
+        if (fa && !d.task.assignees.includes(fa)) return false;
+        if (q) {
+            const h = `${d.task.name} ${d.task.caseName} ${d.task.assignees.join(' ')}`.toLowerCase();
+            if (!h.includes(q)) return false;
+        }
+        return true;
+    });
+
+    document.getElementById('diff-record-count').textContent = `Showing ${filtered.length} records`;
+
+    const tbody = document.getElementById('diff-table-body');
+    tbody.innerHTML = filtered.length ? filtered.map(d => {
+        let chgBadge = `<span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text3); border:1px solid rgba(255,255,255,0.1)">= Unchanged</span>`;
+        let trStyle = '';
+        
+        if (d.changeType === 'New') {
+            chgBadge = `<span class="badge diff-badge-new">+ New</span>`;
+            trStyle = 'background: rgba(52, 199, 89, 0.03);';
+        } else if (d.changeType === 'Newly Completed') {
+            chgBadge = `<span class="badge diff-badge-done">✓ Done</span>`;
+            trStyle = 'background: rgba(16, 185, 129, 0.03);';
+        } else if (d.changeType === 'Still Pending') {
+            chgBadge = `<span class="badge diff-badge-pending">⏳ Pending</span>`;
+            trStyle = 'background: rgba(251, 191, 36, 0.02);';
+        } else if (d.changeType === 'Removed') {
+            chgBadge = `<span class="badge diff-badge-removed">🗑 Removed</span>`;
+            trStyle = 'background: rgba(255, 59, 48, 0.03); opacity: 0.7;';
+        }
+
+        return `
+        <tr style="${trStyle}">
+            <td>${chgBadge}</td>
+            <td style="color:var(--cobalt); font-weight:600;">${sanitize(d.task.name)}</td>
+            <td>${sanitize(d.task.caseName)}</td>
+            <td>${getStatusBadge(d.task.status, d.task.isOverdue)}</td>
+            <td>${d.task.assignees.map(a => `<span class="assignee-pill">${sanitize(a.split(' ')[0])}</span>`).join('')}</td>
+            <td style="font-size:12px;">${formatDate(d.task.dueDate)} ${getTimelineDeltaHtml(d.task)}</td>
+        </tr>
+        `;
+    }).join('') : '<tr><td colspan="6"><div class="empty-state">No matching comparative data found.</div></td></tr>';
+}
+
+function renderComparativeDashboard(fBaseTasks, fCompareTasks) {
+  const maxBase = getDatasetMaxDate(fBaseTasks);
+  const maxComp = getDatasetMaxDate(fCompareTasks);
+
+  let p1Tasks = fBaseTasks;
+  let p2Tasks = fCompareTasks;
+
+  if (maxComp > 0 && maxBase > 0 && maxComp < maxBase) {
+      p1Tasks = fCompareTasks;
+      p2Tasks = fBaseTasks;
+  }
+
+  calculateDiffData(p1Tasks, p2Tasks);
+
+  const t1 = p1Tasks.length; const t2 = p2Tasks.length;
+  const c1 = p1Tasks.filter(t=>t.status==='Completed').length; const c2 = p2Tasks.filter(t=>t.status==='Completed').length;
+  const ip1 = p1Tasks.filter(t=>t.status==='In Progress').length; const ip2 = p2Tasks.filter(t=>t.status==='In Progress').length;
+  const o1 = p1Tasks.filter(t=>t.isOverdue && t.status!=='Completed').length; const o2 = p2Tasks.filter(t=>t.isOverdue && t.status!=='Completed').length;
+  const b1 = p1Tasks.filter(t => !t.dueDate && t.status !== 'Completed').length; const b2 = p2Tasks.filter(t => !t.dueDate && t.status !== 'Completed').length;
+  const r1 = t1 > 0 ? Math.round(c1 / t1 * 100) : 0; const r2 = t2 > 0 ? Math.round(c2 / t2 * 100) : 0;
+
+  let nText = `Comparing the operational macro matrix of Period 1 against Period 2, we observe an overall volume variation of ${getDeltaB(t1,t2)}. `;
+  if (c2 > c1) nText += `The team has improved the resolution rate, successfully closing ${c2 - c1} more tasks compared to the baseline. `;
+  else nText += `There is a deceleration in task closures, with ${c1 - c2} fewer completed tasks. `;
+  if (o2 > o1) nText += `<strong>Critical Alert:</strong> Overdue risks have increased, escalating to ${o2} elements in breach. Immediate resource reallocation is required.`;
+  else nText += `Notably, time management has been efficient, reducing the volume of overdue tasks by ${o1 - o2} elements.`;
+  document.getElementById('compare-narrative').innerHTML = nText;
+
+  const kpis = [
+      { id: 'rate', lbl: 'Macro Success Rate', v1: r1, v2: r2, pctVal: true, detail: 'Global Resolution %' },
+      { id: 'completed', lbl: 'Resolved Cases', v1: c1, v2: c2, detail: 'Finished actions' },
+      { id: 'inprogress', lbl: 'In Progress (Bottlenecks)', v1: ip1, v2: ip2, inv: true, detail: 'Active workload' },
+      { id: 'overdue', lbl: 'Critical Risk (Overdue)', v1: o1, v2: o2, inv: true, detail: 'Severe accumulated delays' }
+  ];
+
+  document.getElementById('compare-kpi-row').innerHTML = kpis.map((k) => {
+      let delta = k.v2 - k.v1;
+      let pct = k.v1 === 0 ? (k.v2>0?100:0) : Math.round((delta/k.v1)*100);
+      let isGood = k.inv ? delta <= 0 : delta >= 0;
+      let bClass = delta === 0 ? 'delta-neu' : (isGood ? 'delta-pos' : 'delta-neg');
+      let sign = delta > 0 ? '+' : '';
+      let formatVal = k.pctVal ? '%' : '';
+      let dFormat = k.pctVal ? `(${sign}${delta} pts)` : `(${sign}${pct}%)`;
+      
+      return `
+      <div class="kpi-card" style="border-color:rgba(139, 92, 246, 0.4); display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="kpi-label" style="color:#C4B5FD; font-size: 13px; letter-spacing: 1px;">:: ${k.lbl}</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0;">
+              <div class="kpi-value" style="color:#FFF; font-size: 36px;">${k.v2}${formatVal}</div>
+              <span class="delta-badge ${bClass}" style="font-size: 13px; padding: 5px 12px;">${sign}${delta} ${dFormat}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text3); background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+              <span>P1: <strong style="color:var(--white); font-size: 14px;">${k.v1}${formatVal}</strong></span>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <span>P2: <strong style="color:var(--white); font-size: 14px;">${k.v2}${formatVal}</strong></span>
+          </div>
+      </div>`;
+  }).join('');
+
+  Chart.defaults.color = '#94A3B8';
+  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+  ['comp1', 'comp2', 'comp3', 'comp4', 'comp5', 'comp6'].forEach(c => { if(renderedCharts[c]) renderedCharts[c].destroy(); });
+
+  const safeData = (arr) => arr.reduce((a,b)=>a+b,0) === 0 ? arr.map(()=>0.01) : arr; 
+  const ensureDataBar = (arr) => arr.length > 0 ? arr : [0]; 
+  const ensureLabels = (arr) => arr.length > 0 ? arr : ['No Data'];
+
+  try {
+      const ctxRadar = document.getElementById('comp-chart-radar').getContext('2d');
+      renderedCharts.comp2 = new Chart(ctxRadar, {
+          type: 'radar',
+          data: {
+              labels: ['Volume %', 'Resolution %', 'Efficiency %', 'Risk (Inv) %'],
+              datasets: [
+                  { label: 'Period 1', data: safeData([100, t1>0?(c1/t1)*100:0, t1>0?(ip1/t1)*100:0, t1>0?100-((o1/t1)*100):0]), backgroundColor: 'rgba(59, 130, 246, 0.2)', borderColor: '#3B82F6', pointBackgroundColor: '#3B82F6' },
+                  { label: 'Period 2', data: safeData([t1>0?(t2/t1)*100:100, t2>0?(c2/t2)*100:0, t2>0?(ip2/t2)*100:0, t2>0?100-((o2/t2)*100):0]), backgroundColor: 'rgba(139, 92, 246, 0.4)', borderColor: '#8B5CF6', pointBackgroundColor: '#8B5CF6' }
+              ]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { r: { angleLines: { color: 'rgba(255,255,255,0.1)' }, grid: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: '#FFF' }, ticks: { display: false } } } }
+      });
+  } catch(e) {}
+
+  try {
+      const ctx1 = document.getElementById('comp-chart-status').getContext('2d');
+      let grad1 = ctx1.createLinearGradient(0,0,0,400); grad1.addColorStop(0, '#3B82F6'); grad1.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+      let grad2 = ctx1.createLinearGradient(0,0,0,400); grad2.addColorStop(0, '#8B5CF6'); grad2.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
+      renderedCharts.comp1 = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+              labels: ['Completed', 'In Progress', 'Not Started', 'Overdue'],
+              datasets: [
+                  { label: 'Period 1', data: ensureDataBar([c1, ip1, p1Tasks.filter(t=>t.status==='Not Started').length, o1]), backgroundColor: grad1, borderRadius: 6, borderWidth: 1, borderColor: '#3B82F6' },
+                  { label: 'Period 2', data: ensureDataBar([c2, ip2, p2Tasks.filter(t=>t.status==='Not Started').length, o2]), backgroundColor: grad2, borderRadius: 6, borderWidth: 1, borderColor: '#8B5CF6' }
+              ]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+      });
+  } catch(e) {}
+
+  try {
+      const pHigh1 = p1Tasks.filter(t=>t.priority==='High').length; const pHigh2 = p2Tasks.filter(t=>t.priority==='High').length;
+      const pNorm1 = p1Tasks.filter(t=>t.priority!=='High').length; const pNorm2 = p2Tasks.filter(t=>t.priority!=='High').length;
+      const ctxPri = document.getElementById('comp-chart-priority').getContext('2d');
+      renderedCharts.comp3 = new Chart(ctxPri, {
+          type: 'doughnut',
+          data: {
+              labels: ['High P1', 'Normal P1', 'High P2', 'Normal P2'],
+              datasets: [{
+                  data: safeData([pHigh1, pNorm1, pHigh2, pNorm2]),
+                  backgroundColor: ['#FF4646', '#3B82F6', '#991B1B', '#8B5CF6'],
+                  borderWidth: 2, borderColor: '#0F1524', hoverOffset: 8
+              }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: '#FFF' } } } }
+      });
+  } catch(e) {}
+
+  try {
+      const cases = [...new Set(p1Tasks.map(t=>t.caseName).concat(p2Tasks.map(t=>t.caseName)))].sort();
+      const caseLabels = ensureLabels(cases.slice(0,10));
+      const cComp1 = ensureDataBar(caseLabels.map(cn => p1Tasks.filter(t=>t.caseName===cn && t.status==='Completed').length));
+      const cComp2 = ensureDataBar(caseLabels.map(cn => p2Tasks.filter(t=>t.caseName===cn && t.status==='Completed').length));
+      
+      const ctxCaseStat = document.getElementById('comp-chart-case-status').getContext('2d');
+      renderedCharts.comp6 = new Chart(ctxCaseStat, {
+        type: 'bar',
+        data: {
+          labels: caseLabels,
+          datasets: [
+            { label: 'Completed P1', data: cComp1, backgroundColor: '#3B82F6', borderRadius: 4 },
+            { label: 'Completed P2', data: cComp2, backgroundColor: '#8B5CF6', borderRadius: 4 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.04)' } } }, plugins: { legend: { labels: { color: '#FFF' } } } }
+      });
+  } catch(e) {}
+
+  try {
+      const buckets = [...new Set(p1Tasks.map(t=>t.bucket).concat(p2Tasks.map(t=>t.bucket)))].sort();
+      const stLabels = ensureLabels(buckets.slice(0,8));
+      const ctxStages = document.getElementById('comp-chart-stages').getContext('2d');
+      renderedCharts.comp4 = new Chart(ctxStages, {
+          type: 'bar',
+          data: {
+              labels: stLabels,
+              datasets: [
+                  { label: 'P1 Volume', data: ensureDataBar(stLabels.map(b => p1Tasks.filter(t=>t.bucket===b).length)), backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 },
+                  { label: 'P2 Volume', data: ensureDataBar(stLabels.map(b => p2Tasks.filter(t=>t.bucket===b).length)), backgroundColor: 'rgba(139, 92, 246, 0.8)', borderRadius: 4 }
+              ]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+      });
+  } catch(e) {}
+
+  try {
+      const assignees = [...new Set(p1Tasks.reduce((a, t) => a.concat(t.assignees), []).concat(p2Tasks.reduce((a, t) => a.concat(t.assignees), [])))].filter(Boolean).sort();
+      const assLabels = ensureLabels(assignees.slice(0,10));
+      const ctxAss = document.getElementById('comp-chart-assignee').getContext('2d');
+      renderedCharts.comp5 = new Chart(ctxAss, {
+          type: 'line',
+          data: {
+              labels: assLabels,
+              datasets: [
+                  { type: 'bar', label: 'Completed P2', data: ensureDataBar(assLabels.map(u => p2Tasks.filter(t=>t.assignees.includes(u) && t.status==='Completed').length)), backgroundColor: '#8B5CF6', borderRadius: 4 },
+                  { type: 'bar', label: 'Completed P1', data: ensureDataBar(assLabels.map(u => p1Tasks.filter(t=>t.assignees.includes(u) && t.status==='Completed').length)), backgroundColor: '#3B82F6', borderRadius: 4 },
+                  { type: 'line', label: 'Overdue P2', data: ensureDataBar(assLabels.map(u => p2Tasks.filter(t=>t.assignees.includes(u) && t.isOverdue).length)), borderColor: '#FF4646', backgroundColor: '#FF4646', tension: 0.4 }
+              ]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+      });
+  } catch(e) {}
+
+  const cases = [...new Set(p1Tasks.map(t=>t.caseName).concat(p2Tasks.map(t=>t.caseName)))].sort();
+  const tbody = document.getElementById('comp-table-body');
+  
+  tbody.innerHTML = cases.map(c => {
+      let v1 = p1Tasks.filter(t=>t.caseName===c).length; let v2 = p2Tasks.filter(t=>t.caseName===c).length;
+      let rc1 = p1Tasks.filter(t=>t.caseName===c && t.status==='Completed').length; let rc2 = p2Tasks.filter(t=>t.caseName===c && t.status==='Completed').length;
+      let ov1 = p1Tasks.filter(t=>t.caseName===c && t.isOverdue && t.status!=='Completed').length; let ov2 = p2Tasks.filter(t=>t.caseName===c && t.isOverdue && t.status!=='Completed').length;
+      
+      if (v1 === 0 && v2 === 0) return '';
+      
+      return `<tr>
+          <td style="color:#FFF; font-weight:600;">${c}</td>
+          <td>${v1}</td><td>${v2}</td><td>${getDeltaB(v1, v2)}</td>
+          <td>${rc1}</td><td>${rc2}</td><td>${getDeltaB(rc1, rc2)}</td>
+          <td>${ov1}</td><td>${ov2}</td><td>${getDeltaB(ov1, ov2, true)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function renderChartsExpanded(tasks) {
+    if (!tasks || tasks.length === 0) return;
+
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+    const ensureDataBar = (arr) => arr.length > 0 ? arr : [0];
+    const ensureLabels = (arr) => arr.length > 0 ? arr : ['No Data'];
+
+    // Limpia gráficos anteriores para evitar superposiciones
+    ['stChart', 'prChart', 'stgChart', 'csChart', 'cdChart', 'cvChart', 'tmChart', 'alChart'].forEach(c => {
+        if(renderedCharts[c]) renderedCharts[c].destroy();
+    });
+
+    try {
+        const ctxStatus = document.getElementById('chart-status-canvas').getContext('2d');
+        renderedCharts.stChart = new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: { labels: ['Completed', 'In Progress', 'Not Started'], datasets: [{ data: [tasks.filter(t=>t.status==='Completed').length, tasks.filter(t=>t.status==='In Progress').length, tasks.filter(t=>t.status==='Not Started').length], backgroundColor: ['#10B981', '#FBBF24', '#94A3B8'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxPri = document.getElementById('chart-priority-canvas').getContext('2d');
+        renderedCharts.prChart = new Chart(ctxPri, {
+            type: 'doughnut',
+            data: { labels: ['High Priority', 'Normal'], datasets: [{ data: [tasks.filter(t=>t.priority==='High').length, tasks.filter(t=>t.priority!=='High').length], backgroundColor: ['#FF3B30', '#3B82F6'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxStages = document.getElementById('chart-stages-canvas').getContext('2d');
+        const stagesMap = {}; tasks.forEach(t => { stagesMap[t.bucket] = (stagesMap[t.bucket]||0)+1; });
+        const stages = Object.keys(stagesMap).sort((a,b)=>stagesMap[b]-stagesMap[a]).slice(0, 8);
+        renderedCharts.stgChart = new Chart(ctxStages, {
+            type: 'bar',
+            data: { labels: ensureLabels(stages), datasets: [{ label: 'Tasks', data: ensureDataBar(stages.map(s=>stagesMap[s])), backgroundColor: '#00F0FF', borderRadius: 4 }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { display: false } } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxCaseStat = document.getElementById('chart-case-status').getContext('2d');
+        const cases = [...new Set(tasks.map(t=>t.caseName))].sort().slice(0, 15);
+        renderedCharts.csChart = new Chart(ctxCaseStat, {
+            type: 'bar',
+            data: {
+                labels: ensureLabels(cases),
+                datasets: [
+                    { label: 'Completed', data: cases.map(c=>tasks.filter(t=>t.caseName===c && t.status==='Completed').length), backgroundColor: '#10B981' },
+                    { label: 'In Progress', data: cases.map(c=>tasks.filter(t=>t.caseName===c && t.status==='In Progress').length), backgroundColor: '#FBBF24' },
+                    { label: 'Not Started', data: cases.map(c=>tasks.filter(t=>t.caseName===c && t.status==='Not Started').length), backgroundColor: '#94A3B8' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxCaseDate = document.getElementById('chart-case-date').getContext('2d');
+        const cases = [...new Set(tasks.map(t=>t.caseName))].sort().slice(0, 15);
+        const today = new Date(); today.setHours(0,0,0,0);
+        renderedCharts.cdChart = new Chart(ctxCaseDate, {
+            type: 'bar',
+            data: {
+                labels: ensureLabels(cases),
+                datasets: [
+                    { label: 'Overdue', backgroundColor: '#FF3B30', data: cases.map(c=>tasks.filter(t=>t.caseName===c && t.isOverdue && t.status!=='Completed').length) },
+                    { label: 'Due Today/Soon (7d)', backgroundColor: '#FBBF24', data: cases.map(c=>tasks.filter(t=>{ if(t.status==='Completed'||!t.dueDate)return false; const d=new Date(t.dueDate); d.setHours(0,0,0,0); const diff=Math.ceil((d-today)/(1000*60*60*24)); return diff>=0 && diff<=7; }).length) }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxCases = document.getElementById('chart-cases-canvas').getContext('2d');
+        const cases = [...new Set(tasks.map(t=>t.caseName))].sort().slice(0, 15);
+        renderedCharts.cvChart = new Chart(ctxCases, {
+            type: 'bar',
+            data: {
+                labels: ensureLabels(cases),
+                datasets: [
+                    { label: 'High Priority', data: cases.map(c=>tasks.filter(t=>t.caseName===c && t.priority==='High').length), backgroundColor: '#FF3B30', borderRadius: 4 },
+                    { label: 'Normal', data: cases.map(c=>tasks.filter(t=>t.caseName===c && t.priority!=='High').length), backgroundColor: '#3B82F6', borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxTeam = document.getElementById('chart-team-canvas').getContext('2d');
+        const assignees = [...new Set(tasks.reduce((acc, t)=>acc.concat(t.assignees), []))].filter(Boolean).sort().slice(0, 12);
+        renderedCharts.tmChart = new Chart(ctxTeam, {
+            type: 'bar',
+            data: {
+                labels: ensureLabels(assignees),
+                datasets: [
+                    { label: 'Completed', data: assignees.map(u=>tasks.filter(t=>t.assignees.includes(u)&&t.status==='Completed').length), backgroundColor: '#10B981' },
+                    { label: 'Active', data: assignees.map(u=>tasks.filter(t=>t.assignees.includes(u)&&t.status!=='Completed'&&!t.isOverdue).length), backgroundColor: '#3B82F6' },
+                    { label: 'Overdue', data: assignees.map(u=>tasks.filter(t=>t.assignees.includes(u)&&t.isOverdue&&t.status!=='Completed').length), backgroundColor: '#FF3B30' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+        });
+    } catch(e){}
+
+    try {
+        const ctxAssignee = document.getElementById('chart-assignee-lines').getContext('2d');
+        const assignees = [...new Set(tasks.reduce((acc, t)=>acc.concat(t.assignees), []))].filter(Boolean).sort().slice(0, 12);
+        renderedCharts.alChart = new Chart(ctxAssignee, {
+            type: 'line',
+            data: {
+                labels: ensureLabels(assignees),
+                datasets: [
+                    { label: 'Completed', data: assignees.map(u=>tasks.filter(t=>t.assignees.includes(u)&&t.status==='Completed').length), borderColor: '#10B981', backgroundColor: '#10B981', tension: 0.3 },
+                    { label: 'Overdue', data: assignees.map(u=>tasks.filter(t=>t.assignees.includes(u)&&t.isOverdue&&t.status!=='Completed').length), borderColor: '#FF3B30', backgroundColor: '#FF3B30', tension: 0.3 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+        });
+    } catch(e){}
+}
+
+function renderChartDaysCase() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    let selCase = document.getElementById('chart-case-select').value;
+    
+    // Si está vacío (primera carga), auto-selecciona el primer caso que SÍ tenga tareas
+    if (!selCase) {
+        const availableCases = [...new Set(allTasks.filter(t => t.dueDate && t.status !== 'Completed').map(t=>t.caseName))];
+        if (availableCases.length > 0) {
+            selCase = availableCases[0];
+            document.getElementById('chart-case-select').value = selCase;
+        }
+    }
+
+    const titleSpan = document.getElementById('title-label-case');
+    if (titleSpan) titleSpan.textContent = selCase ? `- ${selCase}` : '';
+
+    if(renderedCharts.daysCase) renderedCharts.daysCase.destroy();
+
+    const caseTasks = allTasks.filter(t => t.caseName === selCase && t.dueDate && t.status !== 'Completed')
+                           .sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 20);
+
+    const canvasWrapper = document.getElementById('chart-days-case').parentElement;
+    let msgDiv = document.getElementById('msg-empty-case');
+    
+    // Creación dinámica del mensaje legible si no hay tareas
+    if (!msgDiv) {
+        msgDiv = document.createElement('div');
+        msgDiv.id = 'msg-empty-case';
+        msgDiv.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#94A3B8; font-size:14px; font-weight:600; text-align:center; width:100%;';
+        canvasWrapper.appendChild(msgDiv);
+    }
+
+    if (caseTasks.length === 0) {
+        msgDiv.textContent = `No hay registro de tareas pendientes con fecha para el caso: ${selCase}`;
+        msgDiv.style.display = 'block';
+        document.getElementById('chart-days-case').style.display = 'none';
+        return; // Detiene el renderizado
+    } else {
+        msgDiv.style.display = 'none';
+        document.getElementById('chart-days-case').style.display = 'block';
+    }
+
+    const ensureDataBar = (arr) => arr.length > 0 ? arr : [0]; 
+    const ensureLabels = (arr) => arr.length > 0 ? arr : ['No Data'];
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+    const caseTaskLabels = ensureLabels(caseTasks.map(t => t.name.length > 60 ? t.name.substring(0,60) + '...' : t.name));
+    const caseTaskData = ensureDataBar(caseTasks.map(t => {
+        const d = new Date(t.dueDate); d.setHours(0,0,0,0);
+        return Math.ceil((d.getTime() - today.getTime()) / (1000*60*60*24));
+    }));
+    
+    const ctxDaysCase = document.getElementById('chart-days-case').getContext('2d');
+    renderedCharts.daysCase = new Chart(ctxDaysCase, {
+        type: 'bar',
+        data: {
+            labels: caseTaskLabels,
+            datasets: [{ label: 'Days to Deadline (Negative=Overdue)', data: caseTaskData, backgroundColor: caseTaskData.map(v => v<0 ? '#FF4646' : '#00F0FF'), borderRadius: 4 }]
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' } }, y: { grid: { display: false }, ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
+    });
+}
+
+function renderChartDaysUser() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    let selUser = document.getElementById('chart-user-select').value;
+    
+    // Auto-selección en primera carga
+    if (!selUser) {
+        const availableUsers = [...new Set(allTasks.filter(t => t.dueDate && t.status !== 'Completed').reduce((acc, t)=>acc.concat(t.assignees), []))].sort();
+        if (availableUsers.length > 0) {
+            selUser = availableUsers[0];
+            document.getElementById('chart-user-select').value = selUser;
+        }
+    }
+
+    const titleSpan = document.getElementById('title-label-user');
+    if (titleSpan) titleSpan.textContent = selUser ? `- ${selUser}` : '';
+
+    if(renderedCharts.daysUser) renderedCharts.daysUser.destroy();
+
+    const userTasks = allTasks.filter(t => t.assignees.includes(selUser) && t.dueDate && t.status !== 'Completed')
+                           .sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 20);
+
+    const canvasWrapper = document.getElementById('chart-days-user').parentElement;
+    let msgDiv = document.getElementById('msg-empty-user');
+    
+    // Mensaje legible si no hay tareas
+    if (!msgDiv) {
+        msgDiv = document.createElement('div');
+        msgDiv.id = 'msg-empty-user';
+        msgDiv.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#94A3B8; font-size:14px; font-weight:600; text-align:center; width:100%;';
+        canvasWrapper.appendChild(msgDiv);
+    }
+
+    if (userTasks.length === 0) {
+        msgDiv.textContent = `No hay registro de tareas pendientes con fecha asignadas a: ${selUser}`;
+        msgDiv.style.display = 'block';
+        document.getElementById('chart-days-user').style.display = 'none';
+        return; 
+    } else {
+        msgDiv.style.display = 'none';
+        document.getElementById('chart-days-user').style.display = 'block';
+    }
+
+    const ensureDataBar = (arr) => arr.length > 0 ? arr : [0]; 
+    const ensureLabels = (arr) => arr.length > 0 ? arr : ['No Data'];
+    Chart.defaults.color = '#94A3B8';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+                           
+    const userTaskLabels = ensureLabels(userTasks.map(t => {
+        let lbl = `[${t.caseName.substring(0,15)}] ${t.name}`;
+        return lbl.length > 60 ? lbl.substring(0,60) + '...' : lbl;
+    }));
+    const userTaskData = ensureDataBar(userTasks.map(t => {
+        const d = new Date(t.dueDate); d.setHours(0,0,0,0);
+        return Math.ceil((d.getTime() - today.getTime()) / (1000*60*60*24));
+    }));
+    
+    const ctxDaysUser = document.getElementById('chart-days-user').getContext('2d');
+    renderedCharts.daysUser = new Chart(ctxDaysUser, {
+        type: 'bar',
+        data: {
+            labels: userTaskLabels,
+            datasets: [{ label: 'Days to Deadline (Negative=Overdue)', data: userTaskData, backgroundColor: userTaskData.map(v => v<0 ? '#FF4646' : '#8B5CF6'), borderRadius: 4 }]
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' } }, y: { grid: { display: false }, ticks: { autoSkip: false } } }, plugins: { legend: { display: false } } }
+    });
+}
+
+function populateFilters() {
+  const cases = [...new Set(allTasks.map(t => t.caseName))].sort();
+  const buckets = [...new Set(allTasks.map(t => t.bucket))].sort();
+  
+  const activeThreshold = new Date();
+  activeThreshold.setDate(activeThreshold.getDate() - 90);
+
+  const assigneesRaw = allTasks.reduce((acc, t) => acc.concat(t.assignees), []);
+  const allAssignees = [...new Set(assigneesRaw)].filter(Boolean);
+
+  activeAssigneesGlobal = allAssignees.filter(u => {
+      return allTasks.some(t => {
+          if (!t.assignees.includes(u)) return false;
+          if (t.status !== 'Completed') return true; 
+          let dateStr = t.completedDate || t.dueDate;
+          if (dateStr) {
+              let d = new Date(dateStr);
+              if (d >= activeThreshold) return true;
+          }
+          return false;
+      });
+  }).sort();
+  
+  fillSelect('filter-case', cases, 'All Cases');
+  fillSelect('filter-bucket', buckets, 'All Stages');
+  
+  fillSelect('filter-assignee', activeAssigneesGlobal, 'All Users');
+  fillSelect('chart-case-select', cases, 'Select Case...');
+  fillSelect('chart-user-select', activeAssigneesGlobal, 'Select User...');
+}
+
+function fillSelect(id, items, ph) {
+  const sel = document.getElementById(id);
+  if(sel) sel.innerHTML = `<option value="">${ph}</option>` + items.map(i => `<option value="${sanitize(i)}">${sanitize(i)}</option>`).join('');
+}
+
+function filterTaskArray(tasksArray) {
+  const fc = document.getElementById('filter-case').value;
+  const fb = document.getElementById('filter-bucket').value;
+  const fs = document.getElementById('filter-status').value;
+  const fa = document.getElementById('filter-assignee').value;
+  const fd = document.getElementById('filter-date').value;
+  const q = document.getElementById('search-input').value.toLowerCase();
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  return tasksArray.filter(t => {
+    if (fc && t.caseName !== fc) return false;
+    if (fb && t.bucket !== fb) return false;
+    if (fs === '_not_completed') { if (t.status === 'Completed') return false; } 
+    else if (fs && t.status !== fs) { return false; }
+    if (fa && !t.assignees.includes(fa)) return false;
+    
+    if (fd) {
+      if (!t.dueDate) return false;
+      const dDate = new Date(t.dueDate);
+      dDate.setHours(0,0,0,0);
+      const diffTime = dDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (fd === 'overdue' && (diffDays >= 0 || t.status === 'Completed')) return false;
+      if (fd === 'today' && diffDays !== 0) return false;
+      if (fd === 'this_week' && (diffDays < 0 || diffDays > 7)) return false;
+      if (fd === 'next_week' && (diffDays <= 7 || diffDays > 14)) return false;
+      if (fd === 'next_month' && (diffDays < 0 || diffDays > 30)) return false;
+    }
+
+    if (q) {
+      const h = `${t.name} ${t.caseName} ${t.bucket} ${t.assignees.join(' ')} ${t.description}`.toLowerCase();
+      if (!h.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function clearAllFilters() {
+  ['filter-case','filter-bucket','filter-status','filter-assignee','filter-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  document.getElementById('search-input').value = '';
+  activeKpiFilter = null; 
+  renderDashboard();
+}
+
+function toggleKpiFilter(filterId) {
+    activeKpiFilter = activeKpiFilter === filterId ? null : filterId;
+    renderDashboard();
+}
+
+function renderDashboard() {
+  try {
+    const fBase = filterTaskArray(allTasks);
+    currentFilteredTasks = fBase; 
+    
+    renderKPIs(fBase);
+
+    let fLower = fBase;
+    if (activeKpiFilter === 'completed') fLower = fBase.filter(t => t.status === 'Completed');
+    else if (activeKpiFilter === 'inprogress') fLower = fBase.filter(t => t.status === 'In Progress');
+    else if (activeKpiFilter === 'overdue') fLower = fBase.filter(t => t.isOverdue && t.status !== 'Completed');
+    else if (activeKpiFilter === 'blank') fLower = fBase.filter(t => !t.dueDate && t.status !== 'Completed');
+
+    renderTable(fLower);
+    renderCases(fLower);
+    renderPeople(fLower);
+    renderStrategicWatch(fLower);
+    
+    if(document.getElementById('view-charts').style.display === 'block') {
+        renderChartsExpanded(fLower);
+        renderChartDaysCase();
+        renderChartDaysUser();
+    }
+
+    if (isCompareMode && compareTasks.length > 0) {
+      const fCompare = filterTaskArray(compareTasks);
+      let fCompareLower = fCompare;
+      if (activeKpiFilter === 'completed') fCompareLower = fCompare.filter(t => t.status === 'Completed');
+      else if (activeKpiFilter === 'inprogress') fCompareLower = fCompare.filter(t => t.status === 'In Progress');
+      else if (activeKpiFilter === 'overdue') fCompareLower = fCompare.filter(t => t.isOverdue && t.status !== 'Completed');
+      else if (activeKpiFilter === 'blank') fCompareLower = fCompare.filter(t => !t.dueDate && t.status !== 'Completed');
+      
+      if(document.getElementById('view-compare').style.display === 'block') {
+          renderComparativeDashboard(fLower, fCompareLower);
+      }
+    }
+  } catch (err) {
+    console.error("Dashboard Rendering Error: ", err);
+  }
+}
+
+function renderKPIs(tasks) {
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.status === 'Completed').length;
+  const inProgress = tasks.filter(t => t.status === 'In Progress').length;
+  const overdue = tasks.filter(t => t.isOverdue && t.status !== 'Completed').length;
+  const blankDates = tasks.filter(t => !t.dueDate && t.status !== 'Completed').length;
+  const rate = total > 0 ? Math.round(completed / total * 100) : 0;
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi-card c-cobalt anim ${activeKpiFilter==='total'?'active-kpi':''}" onclick="toggleKpiFilter('total')" title="Click to filter all views by Active Tasks"><div class="kpi-label">Active Tasks</div><div class="kpi-value">${total}</div><div class="kpi-detail">Filtered Universe</div></div>
+    <div class="kpi-card c-green anim ${activeKpiFilter==='completed'?'active-kpi':''}" onclick="toggleKpiFilter('completed')" style="animation-delay:0.1s" title="Click to filter all views by Completed tasks"><div class="kpi-label">Completed</div><div class="kpi-value" style="color:var(--green)">${completed}</div><div class="kpi-detail">${rate}% Success Rate</div></div>
+    <div class="kpi-card c-yellow anim ${activeKpiFilter==='inprogress'?'active-kpi':''}" onclick="toggleKpiFilter('inprogress')" style="animation-delay:0.2s" title="Click to filter all views by In Progress tasks"><div class="kpi-label">In Progress</div><div class="kpi-value" style="color:var(--yellow)">${inProgress}</div><div class="kpi-detail">Active Actions</div></div>
+    <div class="kpi-card c-red anim ${activeKpiFilter==='overdue'?'active-kpi':''}" onclick="toggleKpiFilter('overdue')" style="animation-delay:0.3s" title="Click to filter all views by Critical Overdue tasks"><div class="kpi-label">Critical Overdue</div><div class="kpi-value">${overdue}</div><div class="kpi-detail">Breach Trajectory</div></div>
+    <div class="kpi-card c-sky anim ${activeKpiFilter==='blank'?'active-kpi':''}" onclick="toggleKpiFilter('blank')" style="animation-delay:0.4s" title="Click to filter all views by tasks missing a deadline"><div class="kpi-label">Blank Deadlines</div><div class="kpi-value" style="color:var(--sky)">${blankDates}</div><div class="kpi-detail">Pending Backlog</div></div>
+    <div class="kpi-card c-mint anim" style="animation-delay:0.5s" title="Overall completion resolution rate"><div class="kpi-label">Remediation Rate</div><div class="kpi-value" style="color:var(--mint)">${rate}%</div><div class="kpi-detail">Overall Resolution</div></div>
+  `;
+}
+
+// MOTOR DE EVALUACIÓN SEMÁNTICA CON NEGATIVE CONSTRAINTS
+function semanticMatch(taskName, requiredKWs, penalizeKWs = []) {
+    let n = taskName.toLowerCase();
+    if (penalizeKWs.some(pw => n.includes(pw))) return false;
+    return requiredKWs.every(kw => {
+        if (Array.isArray(kw)) {
+            return kw.some(syn => n.includes(syn)); 
+        }
+        return n.includes(kw);
+    });
+}
+
+function getLitigationPrerequisites(taskName, bucket) {
+    const combined = (taskName + ' ' + bucket).toLowerCase();
+    
+    if (combined.includes('rebuttal') && (combined.includes('witness') || combined.includes('expert') || combined.includes('statement') || combined.includes('report'))) {
+        return [
+            { 
+              name: "Review Opposing Counsel's Witness Statements/Reports", 
+              eval: (n) => semanticMatch(n, [['review', 'analyze'], ['opposing', 'plaintiff', 'defendant', 'initial'], ['witness', 'statement', 'expert', 'report']], ['discovery', 'interrogator', 'rfp', 'rfa', 'disclosure'])
+            },
+            { 
+              name: "Draft Rebuttal Statements/Reports", 
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], 'rebuttal'], ['discovery', 'disclosure']) 
+            },
+            { 
+              name: "Partner Review of Rebuttal", 
+              eval: (n) => semanticMatch(n, ['review', 'rebuttal', ['partner', 'attorney', 'senior']], ['discovery', 'disclosure'])
+            },
+            { 
+              name: "File and Serve Rebuttal", 
+              eval: (n) => semanticMatch(n, [['serve', 'file'], 'rebuttal'], ['discovery', 'disclosure'])
+            }
+        ];
+    }
+    
+    if (combined.includes('witness list') || combined.includes('witness statement') || combined.includes('expert designation') || combined.includes('expert report')) {
+        return [
+            { 
+              name: "Confer with Client/Expert/Witness", 
+              eval: (n) => semanticMatch(n, [['confer', 'meet', 'interview'], ['witness', 'expert', 'client']], ['rebuttal', 'discovery'])
+            },
+            { 
+              name: "Draft Initial Statements/Designations", 
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['witness', 'expert', 'statement', 'designation']], ['rebuttal', 'discovery'])
+            },
+            { 
+              name: "Attorney Review", 
+              eval: (n) => semanticMatch(n, ['review', ['witness', 'expert', 'statement', 'designation']], ['rebuttal', 'discovery'])
+            },
+            { 
+              name: "Serve Initial Disclosures/Statements", 
+              eval: (n) => semanticMatch(n, [['serve', 'file'], ['witness', 'expert', 'statement', 'designation']], ['rebuttal', 'discovery'])
+            }
+        ];
+    }
+
+    if (combined.includes('msj') || combined.includes('dispositive') || combined.includes('summary judgment') || combined.includes('motion to dismiss')) {
+        return [
+            {
+              name: "Legal Research & Strategy Outline",
+              eval: (n) => semanticMatch(n, [['research', 'outline', 'strategy']])
+            },
+            {
+              name: "Draft Motion and Memorandum of Law",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['motion', 'msj', 'memo', 'brief']], ['discovery', 'disclosure', 'witness'])
+            },
+            {
+              name: "Compile Evidentiary Exhibits / Affidavits",
+              eval: (n) => semanticMatch(n, [['exhibit', 'affidavit', 'declaration', 'appendix']])
+            },
+            {
+              name: "Partner/Senior Review",
+              eval: (n) => semanticMatch(n, ['review', ['motion', 'msj']], ['discovery', 'disclosure', 'witness'])
+            },
+            {
+              name: "File and Serve Motion",
+              eval: (n) => semanticMatch(n, [['file', 'serve'], ['motion', 'msj']], ['discovery', 'disclosure', 'witness'])
+            }
+        ];
+    }
+
+    if (combined.includes('discovery') || combined.includes('interrogator') || combined.includes('rfp') || combined.includes('production') || combined.includes('rfa') || combined.includes('admission')) {
+        return [
+            {
+              name: "Gather Documents / Confer with Client",
+              eval: (n) => semanticMatch(n, [['gather', 'collect', 'confer', 'client']])
+            },
+            {
+              name: "Draft Objections and Responses",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['respons', 'objection', 'answer']], ['disclosure', 'motion', 'witness'])
+            },
+            {
+              name: "Client Verification / Signature",
+              eval: (n) => semanticMatch(n, [['verif', 'sign', 'client review']])
+            },
+            {
+              name: "Serve Discovery Responses",
+              eval: (n) => semanticMatch(n, ['serve', ['discovery', 'respons', 'objection', 'answer']], ['disclosure', 'motion', 'witness'])
+            }
+        ];
+    }
+
+    if (combined.includes('deposition') || combined.includes('depo')) {
+        return [
+            {
+              name: "Draft Deposition Notice / Subpoena",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['notice', 'subpoena']])
+            },
+            {
+              name: "Prepare Deposition Outline",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], 'outline'])
+            },
+            {
+              name: "Compile Deposition Exhibits",
+              eval: (n) => semanticMatch(n, [['exhibit', 'binder']])
+            },
+            {
+              name: "Witness Preparation Session",
+              eval: (n) => semanticMatch(n, ['prep', ['witness', 'client', 'depo']])
+            }
+        ];
+    }
+
+    if (combined.includes('initial disclosures') || combined.includes('rule 26')) {
+        return [
+            {
+              name: "Gather Initial Documents and Data",
+              eval: (n) => semanticMatch(n, [['gather', 'collect', 'document']])
+            },
+            {
+              name: "Draft Initial Disclosures",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], 'disclosure'], ['discovery', 'motion', 'witness'])
+            },
+            {
+              name: "Serve Initial Disclosures",
+              eval: (n) => semanticMatch(n, [['serve', 'file'], 'disclosure'], ['discovery', 'motion', 'witness'])
+            }
+        ];
+    }
+
+    if (combined.includes('pleading') || combined.includes('complaint') || combined.includes('answer')) {
+        return [
+            {
+              name: "Draft Pleading",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['pleading', 'complaint', 'answer']], ['discovery', 'disclosure'])
+            },
+            {
+              name: "Client Review and Verification",
+              eval: (n) => semanticMatch(n, ['client', ['review', 'verif', 'sign']])
+            },
+            {
+              name: "File and Serve Pleading",
+              eval: (n) => semanticMatch(n, [['file', 'serve'], ['pleading', 'complaint', 'answer']], ['discovery', 'disclosure'])
+            }
+        ];
+    }
+
+    if (combined.includes('mediation') || combined.includes('settlement')) {
+        return [
+            {
+              name: "Draft Mediation/Settlement Statement",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], 'statement'], ['discovery', 'disclosure', 'witness'])
+            },
+            {
+              name: "Client Preparation Session",
+              eval: (n) => semanticMatch(n, ['client', 'prep'])
+            },
+            {
+              name: "Obtain Settlement Authority",
+              eval: (n) => semanticMatch(n, [['authority', 'consent']])
+            }
+        ];
+    }
+    
+    if (combined.includes('exhibit') && (combined.includes('serve') || combined.includes('exchange') || combined.includes('deadline'))) {
+        return [
+            {
+              name: "Draft and Compile Final Exhibit List & Evidentiary Documents",
+              eval: (n) => semanticMatch(n, [['finalize', 'prepare', 'gather', 'draft', 'compile', 'cierre'], 'exhibit'], ['disclosure', 'discovery', 'motion'])
+            },
+            {
+              name: "Senior Attorney/Partner Validation of Exhibits",
+              eval: (n) => semanticMatch(n, [['review', 'valid'], 'exhibit'], ['disclosure', 'discovery', 'motion'])
+            },
+            {
+              name: "Prepare, Finalize and Serve Arbitration/Trial Exhibits (Exchange)",
+              eval: (n) => semanticMatch(n, [['serve', 'exchange', 'send', 'envío', 'prepare'], 'exhibit'], ['disclosure', 'discovery', 'motion'])
+            }
+        ];
+    }
+
+    if (combined.includes('trial') || combined.includes('ptc') || combined.includes('pre-trial')) {
+        return [
+            {
+              name: "Draft Pre-trial Order / Memorandum",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['order', 'memo']], ['discovery'])
+            },
+            {
+              name: "Prepare Final Witness & Exhibit Lists",
+              eval: (n) => semanticMatch(n, [['prepare', 'draft'], ['witness', 'exhibit', 'list']], ['discovery'])
+            },
+            {
+              name: "Draft Motions in Limine",
+              eval: (n) => semanticMatch(n, [['draft', 'prepare'], ['limine', 'mil']], ['discovery'])
+            },
+            {
+              name: "Assemble Trial Binders / Tech Prep",
+              eval: (n) => semanticMatch(n, [['binder', 'tech', 'presentation']])
+            }
+        ];
+    }
+
+    let cleanName = taskName.toLowerCase().replace(/deadline/g, '').replace(/lawtoolbox/g, '').replace(/to/g, '').replace(/[\(\)]/g, '').trim();
+    let importantWords = cleanName.split(' ').filter(w => w.length > 4 && !['serve','draft','file','prepare'].includes(w));
+    let kWord = importantWords.length > 0 ? importantWords[importantWords.length - 1] : 'document';
+    
+    return [
+        { 
+          name: `Draft/Prepare: ${cleanName || 'Initial Filings'}`, 
+          eval: (n) => semanticMatch(n, [['draft', 'prepare'], kWord], ['disclosure', 'discovery'])
+        },
+        { 
+          name: `Partner/Senior Counsel Review`, 
+          eval: (n) => semanticMatch(n, ['review', kWord])
+        },
+        { 
+          name: `File and Serve ${cleanName || 'Documentation'}`, 
+          eval: (n) => semanticMatch(n, [['file', 'serve'], kWord], ['disclosure', 'discovery'])
+        }
+    ];
+}
+
+function getTimelineDeltaHtml(t) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (!t.dueDate) return '';
+    
+    const dDate = new Date(t.dueDate); dDate.setHours(0,0,0,0);
+    const diffDaysToToday = Math.ceil((dDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (t.status === 'Completed') {
+        let compText = '✓ Done';
+        if (t.completedDate) {
+            const cDate = new Date(t.completedDate); cDate.setHours(0,0,0,0);
+            const diffDaysToDue = Math.ceil((cDate.getTime() - dDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDaysToDue < 0) compText = `✓ Done (${Math.abs(diffDaysToDue)}d early)`;
+            else if (diffDaysToDue === 0) compText = `✓ Done (On time)`;
+            else compText = `✓ Done (${diffDaysToDue}d late)`;
+        }
+        return `<span style="color:var(--green); font-weight:600; font-size:10px; display:block; margin-top:4px;">${compText}</span>`;
+    } else if (diffDaysToToday < 0) {
+        return `<span style="color:var(--red); font-weight:700; font-size:10px; display:block; margin-top:4px;">⚠️ ${Math.abs(diffDaysToToday)}d Overdue</span>`;
+    } else if (diffDaysToToday === 0) {
+        return `<span style="color:var(--yellow); font-weight:700; font-size:10px; display:block; margin-top:4px;">⏳ Due Today</span>`;
+    } else {
+        return `<span style="color:var(--cobalt); font-weight:600; font-size:10px; display:block; margin-top:4px;">⏱ ${diffDaysToToday}d Left</span>`;
+    }
+}
+
+function renderStrategicWatch(tasks) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  
+  const lateTasks = tasks.filter(t => t.isOverdue && t.status !== 'Completed')
+                         .sort((a,b) => (a.dueDate || 0) - (b.dueDate || 0)).slice(0, 5);
+  document.getElementById('strategic-overdue-list').innerHTML = lateTasks.length ? lateTasks.map(t => {
+    const days = Math.floor((today - new Date(t.dueDate)) / (1000*60*60*24));
+    return `<div class="strategic-item">
+      <div class="strategic-meta">
+        <span class="strategic-title" style="cursor:pointer; text-decoration:underline;" onclick="openNotes('${escId(t.id)}')">${sanitize(t.name)}</span>
+        <span class="strategic-sub">${sanitize(t.caseName)} — ${sanitize(t.assignees.join(', ')) || 'Unassigned'}</span>
+      </div>
+      <span style="color:var(--red); font-weight:700;">${days} Days Overdue</span>
+    </div>`;
+  }).join('') : '<div class="empty-state">No critical overdue elements recorded.</div>';
+
+  const bottleneckTasks = tasks.filter(t => t.status === 'In Progress' || (t.isOverdue && t.status !== 'Completed'))
+                       .sort((a,b) => (a.dueDate || 9e15) - (b.dueDate || 9e15)).slice(0, 8);
+  document.getElementById('strategic-bottlenecks-list').innerHTML = bottleneckTasks.length ? bottleneckTasks.map(t => {
+      let reasons = [];
+      if (t.isOverdue) {
+          const dDate = new Date(t.dueDate); dDate.setHours(0,0,0,0);
+          const diffDays = Math.ceil((today.getTime() - dDate.getTime()) / (1000 * 60 * 60 * 24));
+          reasons.push(`<span style="color:var(--red);">Overdue by ${diffDays} days</span>`);
+      } 
+      if (t.status === 'In Progress') {
+          reasons.push(`<span style="color:var(--yellow);">Stalled "In Progress"</span>`);
+      }
+      if (t.priority === 'High') reasons.push(`<span style="color:var(--red); font-weight:bold;">High Priority</span>`);
+
+      return `
+      <div class="strategic-item" style="display:flex; flex-direction:column; align-items:flex-start; gap:10px;">
+        <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+            <span class="strategic-title" style="cursor:pointer; text-decoration:underline;" onclick="openNotes('${escId(t.id)}')">${sanitize(t.name)}</span>
+            <span class="badge ${t.status === 'In Progress' ? 'badge-inprogress' : 'badge-overdue'}">${sanitize(t.status)}</span>
+        </div>
+        <div class="strategic-sub" style="width:100%;">Case: <strong style="color:var(--text2)">${sanitize(t.caseName)}</strong> | Assignee: ${sanitize(t.assignees[0]) || 'Unassigned'}</div>
+        <div style="font-size:11.5px; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05); width:100%; display:flex; gap:10px; flex-wrap:wrap;">
+            <span style="opacity:0.7">Friction Points:</span> ${reasons.join(' <span style="opacity:0.3">|</span> ')}
+        </div>
+      </div>`;
+  }).join('') : '<div class="empty-state">No bottlenecks identified.</div>';
+
+  const fc = document.getElementById('filter-case').value;
+  const fa = document.getElementById('filter-assignee').value;
+  
+  const aiFilteredTasks = allTasks.filter(t => {
+      if (fc && t.caseName !== fc) return false;
+      if (fa && !t.assignees.includes(fa)) return false;
+      return true;
+  });
+
+  const deadlineTasks = aiFilteredTasks.filter(t => {
+      if(t.status === 'Completed' || !t.dueDate) return false;
+      const dDate = new Date(t.dueDate); dDate.setHours(0,0,0,0);
+      const diffDays = Math.ceil((dDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if(diffDays < 0 || diffDays > 30) return false;
+      
+      const nLower = t.name.trim().toLowerCase(); 
+      const bLower = t.bucket.trim().toLowerCase();
+      
+      const isLawToolbox = bLower.includes('lawtoolbox');
+      const isStandardDeadline = nLower.startsWith('deadline') || nLower.startsWith('(deadline)');
+      
+      return isStandardDeadline || isLawToolbox;
+  }).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+  let aiHtml = '';
+  if(deadlineTasks.length === 0) {
+      aiHtml = '<div class="empty-state" style="margin: 20px;">No explicit litigation deadlines (LawToolbox or Task Name starting with Deadline) identified within the next 30 days.</div>';
+  } else {
+      deadlineTasks.slice(0,5).forEach(dt => {
+          const preTasks = getLitigationPrerequisites(dt.name, dt.bucket);
+          let suggestionsHtml = '';
+          
+          const caseTasks = aiFilteredTasks.filter(t => {
+              if (t.caseName !== dt.caseName || t.id === dt.id) return false;
+              const tLower = t.name.toLowerCase();
+              const bLower = t.bucket.toLowerCase();
+              if (tLower.includes('deadline') || bLower.includes('lawtoolbox')) return false; 
+              return true;
+          });
+          
+          preTasks.forEach(pt => {
+              const exists = caseTasks.find(ct => pt.eval(ct.name.toLowerCase()));
+              
+              if(exists) {
+                  let statusTag = exists.status === 'Completed' 
+                      ? `<span style="color:var(--green); font-size:10px; font-weight:bold; margin-left:6px;">[✓ COMPLETED]</span>`
+                      : `<span style="color:var(--yellow); font-size:10px; font-weight:bold; margin-left:6px;">[⏳ ${exists.status.toUpperCase()}]</span>`;
+
+                  suggestionsHtml += `
+                  <div class="ai-req-item ai-req-covered">
+                      <div class="ai-req-name"><span style="color:#34C759;">✅</span> ${pt.name}</div>
+                      <div class="ai-req-meta">Covered by: <span class="ai-task-link" onclick="openNotes('${escId(exists.id)}')">${sanitize(exists.name)}</span> ${statusTag}</div>
+                  </div>`;
+              } else {
+                  const targetDate = new Date(dt.dueDate); targetDate.setDate(targetDate.getDate() - 4);
+                  suggestionsHtml += `
+                  <div class="ai-req-item ai-req-missing">
+                      <div class="ai-req-name"><span style="color:#FFCC00;">⚠️</span> ${pt.name}</div>
+                      <div class="ai-req-meta">Status: <strong style="color:var(--yellow)">Missing Task</strong> (Suggest due by ${formatDate(targetDate)})</div>
+                  </div>`;
+              }
+          });
+
+          const isLawToolbox = dt.bucket.toLowerCase().includes('lawtoolbox');
+          const ltbTag = isLawToolbox ? `<span class="ai-lawtoolbox-tag">LawToolbox Deadline</span>` : '';
+
+          aiHtml += `
+          <div class="ai-module">
+              <div class="ai-header">
+                  <div>
+                      <div class="ai-title" onclick="openNotes('${escId(dt.id)}')">🎯 ${sanitize(dt.name)} ${ltbTag}</div>
+                      <div class="ai-case">${sanitize(dt.caseName)}</div>
+                  </div>
+                  <div class="ai-deadline">
+                      <div class="ai-dl-lbl">Target Deadline</div>
+                      <div class="ai-dl-val">${formatDate(dt.dueDate)}</div>
+                  </div>
+              </div>
+              <div class="ai-body">
+                  <div style="font-size:11px; color:#A78BFA; margin-bottom: 12px; font-style:italic;">
+                    <strong style="color:#C4B5FD;">Agent Reasoning:</strong> Analyzing specific procedural rules with weighted semantic scoring and negative constraints to prevent crossover between distinct legal phases.
+                  </div>
+                  <div class="ai-prereq-lbl">⚖️ Required Procedural Prerequisites:</div>
+                  <div class="ai-req-grid">${suggestionsHtml}</div>
+              </div>
+          </div>`;
+      });
+  }
+  document.getElementById('strategic-ai-analysis').innerHTML = aiHtml;
+
+  const thirtyDaysAgo = new Date(today); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  const targetRecentTasks = aiFilteredTasks.filter(t => {
+      let d = null;
+      if (t.status === 'Completed' && t.completedDate) d = new Date(t.completedDate);
+      else if (t.dueDate) d = new Date(t.dueDate);
+      
+      if (!d) return false;
+      d.setHours(0,0,0,0);
+      return d >= thirtyDaysAgo && d <= today;
+  });
+
+  const rawUsersRecent = targetRecentTasks.reduce((acc, t) => acc.concat(t.assignees), []);
+  const usersRecent = [...new Set(rawUsersRecent)].filter(Boolean);
+  const velocityData = usersRecent.map(u => {
+    const uTasks = targetRecentTasks.filter(t => t.assignees.includes(u));
+    const compTasks = uTasks.filter(t => t.status === 'Completed');
+    const comp = compTasks.length;
+    const total = uTasks.length;
+    const rate = total ? Math.round((comp / total) * 100) : 0;
+    return { name: u, rate, total, comp };
+  }).filter(v => v.total > 0).sort((a,b) => b.rate - a.rate || b.comp - a.comp).slice(0, 5);
+
+  document.getElementById('strategic-velocity-list').innerHTML = velocityData.length ? velocityData.map(v => `
+    <div class="strategic-item">
+      <div class="strategic-meta">
+        <span class="strategic-title">${sanitize(v.name)}</span>
+        <span class="strategic-sub">${v.comp} of ${v.total} tasks completed (measured window: last 30 days)</span>
+      </div>
+      <span style="color:var(--mint); font-weight:700; font-size: 15px;">${v.rate}%</span>
+    </div>`).join('') : '<div class="empty-state">No tracked completions or due dates in the last 30 days.</div>';
+
+  const upcomingTasks = tasks.filter(t => {
+      if (t.status === 'Completed' || !t.dueDate) return false;
+      const dDate = new Date(t.dueDate); dDate.setHours(0,0,0,0);
+      const diffDays = Math.ceil((dDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 30; 
+  }).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
+  
+  document.getElementById('strategic-upcoming-list').innerHTML = upcomingTasks.length ? upcomingTasks.map(t => {
+      const dDate = new Date(t.dueDate); dDate.setHours(0,0,0,0);
+      const diffDays = Math.ceil((dDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const lbl = diffDays === 0 ? 'Due Today' : `In ${diffDays} Days`;
+      return `
+    <div class="strategic-item">
+      <div class="strategic-meta">
+        <span class="strategic-title" style="cursor:pointer; text-decoration:underline;" onclick="openNotes('${escId(t.id)}')">${sanitize(t.name)}</span>
+        <span class="strategic-sub">${sanitize(t.caseName)}</span>
+      </div>
+      <span style="color:var(--yellow); font-weight:700;">${lbl}</span>
+    </div>`}).join('') : '<div class="empty-state">No immediate deadlines within 30 days.</div>';
+}
+
+function renderTable(tasks) {
+  const sorted = [...tasks].sort((a, b) => {
+    let va, vb;
+    switch(sortCol) {
+      case 'name': va = a.name; vb = b.name; break;
+      case 'case': va = a.caseName; vb = b.caseName; break;
+      case 'bucket': va = a.bucket; vb = b.bucket; break;
+      case 'status': va = a.status; vb = b.status; break;
+      case 'priority': va = a.priority === 'High' ? 0 : 1; vb = b.priority === 'High' ? 0 : 1; break;
+      case 'due': va = a.dueDate ? new Date(a.dueDate).getTime() : 9e15; vb = b.dueDate ? new Date(b.dueDate).getTime() : 9e15; break;
+      default: va = a.name; vb = b.name;
+    }
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  document.getElementById('task-count').textContent = sorted.length;
+  const tbody = document.getElementById('task-tbody');
+  
+  tbody.innerHTML = sorted.length ? sorted.map(t => `
+    <tr onclick="openNotes('${escId(t.id)}')" style="cursor:pointer" title="Click to view task details">
+      <td class="task-name">${sanitize(t.name)}</td>
+      <td>${getCaseTag(t.caseName)}</td>
+      <td style="font-size:12px; color:var(--text2)">${sanitize(t.bucket)}</td>
+      <td>${getStatusBadge(t.status, t.isOverdue)}</td>
+      <td><span class="${t.priority === 'High' ? 'priority-high' : 'priority-medium'}">${t.priority === 'High' ? '● High' : '○ Medium'}</span></td>
+      <td><div class="assignee-list">${t.assignees.map(a => `<span class="assignee-pill">${sanitize(a.split(' ')[0])}</span>`).join('')}</div></td>
+      <td style="font-size:12px; color:${!t.dueDate?'var(--text3)':(t.isOverdue&&t.status!=='Completed'?'var(--red)':'var(--text)')}">
+          ${formatDate(t.dueDate)}
+          ${getTimelineDeltaHtml(t)}
+      </td>
+    </tr>
+  `).join('') : '<tr><td colspan="7"><div class="empty-state">No matching tasks found with current filters.</div></td></tr>';
+}
+
+function getCaseTag(caseName) {
+  const color = caseColors[caseName] || '#888';
+  return `<span class="case-tag" style="background:${color}15; color:${color}; border: 1px solid ${color}30">${sanitize(caseName)}</span>`;
+}
+
+function formatDate(d) {
+  if (!d) return 'None';
+  return new Date(d).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function getStatusBadge(status, isOverdue) {
+  if (isOverdue && status !== 'Completed') return `<span class="badge badge-overdue"><span class="badge-dot"></span>Overdue</span>`;
+  if (status === 'Completed') return `<span class="badge badge-completed"><span class="badge-dot"></span>Completed</span>`;
+  if (status === 'In Progress') return `<span class="badge badge-inprogress"><span class="badge-dot"></span>In Progress</span>`;
+  return `<span class="badge badge-notstarted"><span class="badge-dot"></span>Not Started</span>`;
+}
+
+function renderCases(tasks) {
+  const caseMap = {};
+  tasks.forEach(t => { if (!caseMap[t.caseName]) caseMap[t.caseName] = []; caseMap[t.caseName].push(t); });
+  const caseNames = Object.keys(caseMap).sort();
+  document.getElementById('case-count').textContent = caseNames.length;
+
+  document.getElementById('cases-grid').innerHTML = caseNames.map(cn => {
+    const ct = caseMap[cn];
+    const comp = ct.filter(t => t.status === 'Completed').length;
+    const prog = ct.filter(t => t.status === 'In Progress').length;
+    const over = ct.filter(t => t.isOverdue && t.status !== 'Completed').length;
+    const total = ct.length;
+
+    return `
+    <div class="case-card">
+      <div class="case-card-header">
+        <div class="case-card-name" style="color:${caseColors[cn]}">${sanitize(cn)}</div>
+        <div class="case-card-count" title="Tasks currently filtered under this Matter">${total} tasks</div>
+      </div>
+      <div class="case-card-stats">
+        <div class="case-stat"><div class="dot" style="background:var(--green)"></div>${comp} resolved</div>
+        <div class="case-stat"><div class="dot" style="background:var(--yellow)"></div>${prog} ongoing</div>
+        ${over ? `<div class="case-stat"><div class="dot" style="background:var(--red)"></div>${over} late</div>` : ''}
+      </div>
+      <div class="case-progress-bar">
+        <div class="cpb-completed" style="width:${total ? Math.round(comp/total*100) : 0}%"></div>
+        <div class="cpb-inprogress" style="width:${total ? Math.round(prog/total*100) : 0}%"></div>
+        <div class="cpb-notstarted" style="width:${total ? 100 - Math.round(comp/total*100) - Math.round(prog/total*100) : 100}%"></div>
+      </div>
+      <button class="expand-btn" onclick="toggleCase(this)" title="Expand or collapse case tasks details">Expand Task Breakdown ▾</button>
+      <div class="case-card-tasks">
+        ${ct.map(t => {
+          return `
+          <div class="case-task-item" onclick="openNotes('${escId(t.id)}')" style="cursor:pointer" title="Click to view task details">
+            ${getStatusBadge(t.status, t.isOverdue)}
+            <span style="flex:1; padding-left:8px; color:var(--text)">${sanitize(t.name)}</span>
+            <span style="font-size:11px; color:var(--text3); display:flex; align-items:center;">
+                ${formatDate(t.dueDate)} 
+                ${getTimelineDeltaHtml(t).replace('display:block; margin-top:4px;', 'margin-left:8px;')}
+            </span>
+          </div>
+          `;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCase(btn) {
+  const card = btn.closest('.case-card'); card.classList.toggle('expanded');
+  btn.textContent = card.classList.contains('expanded') ? 'Collapse Breakdown ▴' : 'Expand Task Breakdown ▾';
+}
+
+function renderPeople(tasks) {
+  const pMap = {};
+  tasks.forEach(t => { 
+      t.assignees.forEach(a => { 
+          if (!a) return; 
+          if (!activeAssigneesGlobal.includes(a)) return;
+          if (!pMap[a]) pMap[a] = []; 
+          pMap[a].push(t); 
+      }); 
+  });
+  const people = Object.keys(pMap).sort();
+  document.getElementById('people-count').textContent = people.length;
+
+  document.getElementById('people-container').innerHTML = people.map(p => {
+    const pts = pMap[p];
+    return `
+    <div class="person-section">
+      <div class="person-header">
+        <div class="person-avatar">${sanitize(p).slice(0,2).toUpperCase()}</div>
+        <div>
+          <div class="person-name">${sanitize(p)}</div>
+          <div class="person-count">${pts.length} total tasks currently filtered · ${pts.filter(t=>t.status==='Completed').length} successfully resolved</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            ${pts.map(t => {
+              return `
+              <tr onclick="openNotes('${escId(t.id)}')" style="cursor:pointer" title="Click to view task details">
+                <td class="task-name" style="width:30%">${sanitize(t.name)}</td>
+                <td style="width:25%">${getCaseTag(t.caseName)}</td>
+                <td style="width:20%">${getStatusBadge(t.status, t.isOverdue)}</td>
+                <td style="font-size:12px; color:var(--text3); width:25%;">
+                    ${formatDate(t.dueDate)}
+                    ${getTimelineDeltaHtml(t)}
+                </td>
+              </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchView(view) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  const currentTab = document.querySelector(`[data-view="${view}"]`);
+  if (currentTab) currentTab.classList.add('active');
+
+  ['view-standard', 'view-compare', 'view-table', 'view-charts', 'view-cases', 'view-people', 'view-strategic'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+  });
+
+  if (view === 'compare') {
+      document.getElementById('view-compare').style.display = 'block';
+  } else {
+      document.getElementById('view-standard').style.display = 'block';
+      if (view === 'table') document.getElementById('view-table').style.display = '';
+      if (view === 'cases') document.getElementById('view-cases').style.display = '';
+      if (view === 'people') document.getElementById('view-people').style.display = '';
+      if (view === 'strategic') document.getElementById('view-strategic').style.display = '';
+      if (view === 'charts') {
+          document.getElementById('view-charts').style.display = 'block';
+          setTimeout(() => {
+              renderChartsExpanded(currentFilteredTasks);
+              renderChartDaysCase();
+              renderChartDaysUser();
+          }, 200);
+      }
+  }
+}
+
+function escId(id) { return String(id).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+function openNotes(taskId) {
+  let t = allTasks.find(x => x.id === taskId);
+  if (!t) return;
+  
+  document.getElementById('nm-title').innerHTML = sanitize(t.name);
+  document.getElementById('nm-case').innerHTML = `${sanitize(t.caseName)} — ${sanitize(t.bucket)}`;
+  
+  let deadlineDeltaText = '';
+  if (!t.dueDate) {
+    deadlineDeltaText = `<span style="color:var(--text3); font-weight:bold;">📭 No deadline assigned (Backlog)</span>`;
+  } else {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dDate = new Date(t.dueDate); dDate.setHours(0,0,0,0);
+    const diffTime = dDate.getTime() - today.getTime();
+    const diffDaysToToday = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (t.status === 'Completed') {
+      deadlineDeltaText = `<span style="color:var(--green); font-weight:bold;">✅ Task Completed</span>`;
+      if (t.completedDate) {
+         const cDate = new Date(t.completedDate); cDate.setHours(0,0,0,0);
+         const diffDaysToDue = Math.ceil((cDate.getTime() - dDate.getTime()) / (1000 * 60 * 60 * 24));
+         if (diffDaysToDue < 0) deadlineDeltaText = `<span style="color:var(--green); font-weight:bold;">✅ Task Completed (${Math.abs(diffDaysToDue)} days early)</span>`;
+         else if (diffDaysToDue === 0) deadlineDeltaText = `<span style="color:var(--green); font-weight:bold;">✅ Task Completed (On time)</span>`;
+         else deadlineDeltaText = `<span style="color:var(--green); font-weight:bold;">✅ Task Completed (${diffDaysToDue} days late)</span>`;
+      }
+    } else if (diffDaysToToday < 0) {
+      deadlineDeltaText = `<span style="color:var(--red); font-weight:800;">⚠️ Overdue by ${Math.abs(diffDaysToToday)} days</span>`;
+    } else if (diffDaysToToday === 0) {
+      deadlineDeltaText = `<span style="color:var(--yellow); font-weight:800;">📅 Due today!</span>`;
+    } else {
+      deadlineDeltaText = `<span style="color:var(--cobalt); font-weight:700;">⏳ ${diffDaysToToday} days remaining</span>`;
+    }
+  }
+
+  const buildBlock = (lbl, val, styleColor) => `
+    <div class="info-block-card">
+      <span class="lbl">${lbl}</span>
+      <span class="val" ${styleColor ? 'style="color:'+styleColor+'"' : ''}>${val}</span>
+    </div>`;
+
+  let statusColor = '#FFF';
+  if(t.status === 'Completed') statusColor = 'var(--green)';
+  if(t.status === 'In Progress') statusColor = 'var(--yellow)';
+  if(t.isOverdue && t.status !== 'Completed') statusColor = 'var(--red)';
+
+  document.getElementById('nm-meta-grid').innerHTML = 
+    buildBlock('Current Status', sanitize(t.status), statusColor) +
+    buildBlock('Matter Label', sanitize(t.caseName), 'var(--white)') +
+    buildBlock('Assigned Staff', sanitize(t.assignees.join(', ')) || 'Unassigned', 'var(--white)') +
+    buildBlock('Target Deadline', formatDate(t.dueDate), 'var(--white)') +
+    buildBlock('Deadline Analytics Delta', deadlineDeltaText, '');
+
+  document.getElementById('nm-desc').innerHTML = sanitize(t.description) || 'No descriptive notes logged.';
+  document.getElementById('notes-modal').classList.add('active');
+}
+function closeNotes() { document.getElementById('notes-modal').classList.remove('active'); }
+
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const tasks = filterTaskArray(allTasks); 
+  const rows = tasks.map(t => ({
+    'Task Title': t.name, 'Case Matter': t.caseName, 'Process Stage': t.bucket, 'Execution Status': t.status,
+    'Priority Matrix': t.priority, 'Assigned Professionals': t.assignees.join(', '), 'Target Deadline': formatDate(t.dueDate)
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Operational Matrix Export');
+  XLSX.writeFile(wb, `GLA_Hub_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+async function downloadSnapshot() {
+  const area = document.getElementById('capture-area');
+  const btn = document.querySelector('.btn-accent'); 
+  const originalText = btn.innerHTML;
+  btn.textContent = '⚡ Transmitting Render...';
+  
+  const kpis = document.querySelectorAll('.kpi-card');
+  kpis.forEach(k => {
+    k.style.animation = 'none';
+    k.style.opacity = '1';
+    k.style.transform = 'none';
+    k.style.backgroundColor = '#0F1524';
+    k.style.boxShadow = 'none';
+    k.style.borderColor = 'rgba(255,255,255,0.2)';
+  });
+
+  try {
+    const canvas = await html2canvas(area, { scale: 2, backgroundColor: '#070A13', useCORS: true, logging: false });
+    const link = document.createElement('a'); link.download = `GLA_Operations_Snapshot_${new Date().toISOString().slice(0,10)}.png`;
+    link.href = canvas.toDataURL('image/png'); link.click();
+  } catch(err) { alert('Snapshot render pipeline failed.'); }
+
+  kpis.forEach(k => {
+    k.style.animation = '';
+    k.style.opacity = '';
+    k.style.transform = '';
+    k.style.backgroundColor = '';
+    k.style.boxShadow = '';
+    k.style.borderColor = '';
+  });
+  
+  btn.innerHTML = originalText;
+}
+
+function goBack() { location.reload(); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const uZone = document.getElementById('upload-zone');
+  const fIn = document.getElementById('file-input');
+
+  if (uZone && fIn) {
+    uZone.onclick = () => fIn.click();
+    fIn.onchange = e => { 
+      if (e.target.files.length) {
+        handleUpload(e.target.files[0]); 
+      }
+      e.target.value = ''; // FIX: Libera el input para permitir recargas
+    };
+  }
+
+  ['filter-case','filter-bucket','filter-status','filter-assignee','filter-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', renderDashboard);
+  });
+  
+  const searchInput = document.getElementById('search-input');
+  if(searchInput) searchInput.addEventListener('input', renderDashboard);
+
+  document.querySelectorAll('thead th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      
+      document.querySelectorAll('thead th').forEach(h => {
+        h.classList.remove('sorted');
+        const arrow = h.querySelector('.sort-arrow');
+        if(arrow) arrow.textContent = '▼';
+      });
+      
+      th.classList.add('sorted');
+      const arrow = th.querySelector('.sort-arrow');
+      if(arrow) arrow.textContent = sortAsc ? '▲' : '▼';
+      
+      renderDashboard(); 
+    });
+  });
+});
+
+const LOGO_SRC = "Logotipo_ JAL LAW.png";
+</script>
+</body>
+</html>
